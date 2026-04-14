@@ -1,0 +1,34 @@
+# Backend runtime dependencies — used by Dockerfile.api
+# Pinned versions from Blueprint Section 1.2
+# Dev tools (pytest, ruff, mypy, bandit) are installed via pyproject.toml [dev]
+# Fine-tuning deps (torch, transformers, peft, trl, bitsandbytes, datasets) are
+# installed separately on Lightning AI — do NOT add them here.
+
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+pyyaml>=6.0.0
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+psycopg2-binary==2.9.10
+pgvector==0.3.6
+langgraph==0.2.60
+langchain-core==0.3.28
+langchain-openai==0.2.14
+langchain-community==0.3.13
+langsmith==0.2.10
+mcp==1.5.0
+ortools==9.12.4544
+cvxpy==1.6.0
+scipy==1.14.1
+numpy==1.26.4
+neo4j==5.27.0
+sentence-transformers==3.3.1
+rank-bm25==0.2.2
+redis==5.2.1
+pyjwt==2.10.1
+passlib[bcrypt]==1.7.4
+opentelemetry-api==1.29.0
+opentelemetry-sdk==1.29.0
+opentelemetry-instrumentation-fastapi==0.50b0

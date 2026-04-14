@@ -1,0 +1,4 @@
+/* Tailwind base styles — populated during Stage 3 frontend build */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

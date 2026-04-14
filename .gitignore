@@ -1,0 +1,89 @@
+# ──────────────────────────────────────────────
+# LaTeX — source and build artefacts
+# (TeX companion docs are stored in docs/ but untracked)
+# ──────────────────────────────────────────────
+*.tex
+*.pdf
+*.aux
+*.log
+*.out
+*.toc
+*.fdb_latexmk
+*.fls
+*.bbl
+*.blg
+*.synctex.gz
+*.nav
+*.snm
+*.vrb
+
+# ──────────────────────────────────────────────
+# Python
+# ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ──────────────────────────────────────────────
+# Virtual environments
+# ──────────────────────────────────────────────
+agentic-erp-dev/
+agentic-erp-app/
+.venv/
+venv/
+env/
+
+# ──────────────────────────────────────────────
+# Secrets — never commit
+# ──────────────────────────────────────────────
+.env
+*.pem
+*.key
+
+# ──────────────────────────────────────────────
+# Node / Frontend
+# ──────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/build/
+*.tsbuildinfo
+
+# ──────────────────────────────────────────────
+# Fine-tuning artefacts (large binary files)
+# ──────────────────────────────────────────────
+fine_tune/checkpoints/
+fine_tune/__pycache__/
+
+# ──────────────────────────────────────────────
+# Test results (generated JSON outputs)
+# ──────────────────────────────────────────────
+backend/tests/integration/results/
+
+# ──────────────────────────────────────────────
+# Docker
+# ──────────────────────────────────────────────
+.docker/
+
+# ──────────────────────────────────────────────
+# OS
+# ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ──────────────────────────────────────────────
+# IDE
+# ──────────────────────────────────────────────
+.idea/
+.vscode/settings.json
+.vscode/launch.json

@@ -1,0 +1,106 @@
+[build-system]
+requires = ["setuptools>=68.0.0"]
+build-backend = "setuptools.build_meta"
+
+# ------------------------------------------------------------------------------
+# NOTE (ADR-002): pyproject.toml is placed at repo root (not backend/) so that
+# `pip install -e ".[dev]"` works from the repo root in CI (actions/checkout
+# deposits code at workspace root). backend/requirements.txt is kept for Docker
+# build context. See Project_Notes.md for rationale.
+# ------------------------------------------------------------------------------
+
+[project]
+name = "agentic-erp-supply-chain"
+version = "0.1.0"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    # Web framework
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+    # Config / validation
+    "pydantic==2.10.4",
+    "pydantic-settings==2.7.1",
+    "pyyaml>=6.0.0",
+    # Database
+    "sqlalchemy[asyncio]==2.0.36",
+    "asyncpg==0.30.0",
+    "psycopg2-binary==2.9.10",
+    "pgvector==0.3.6",
+    # LangGraph + LangChain
+    "langgraph==0.2.60",
+    "langchain-core==0.3.28",
+    "langchain-openai==0.2.14",
+    "langchain-community==0.3.13",
+    "langsmith==0.2.10",
+    # MCP
+    "mcp==1.5.0",
+    # OR Solvers
+    "ortools==9.12.4544",
+    "cvxpy==1.6.0",
+    "scipy==1.14.1",
+    "numpy==1.26.4",
+    # Graph DB
+    "neo4j==5.27.0",
+    # RAG / Embeddings
+    "sentence-transformers==3.3.1",
+    "rank-bm25==0.2.2",
+    # Cache
+    "redis==5.2.1",
+    # Security
+    "pyjwt==2.10.1",
+    "passlib[bcrypt]==1.7.4",
+    # Observability
+    "opentelemetry-api==1.29.0",
+    "opentelemetry-sdk==1.29.0",
+    "opentelemetry-instrumentation-fastapi==0.50b0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.24.0",
+    "httpx==0.28.1",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "black>=24.0.0",
+    "bandit[toml]>=1.8.0",
+]
+
+[tool.setuptools.packages.find]
+# Makes `import app` work after `pip install -e .` from repo root
+where = ["backend"]
+
+# ------------------------------------------------------------------------------
+# pytest
+# ------------------------------------------------------------------------------
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["backend/tests"]
+
+# ------------------------------------------------------------------------------
+# ruff (linter + formatter)
+# ------------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = [
+    "N999",   # module name contains uppercase (app/ is intentional)
+]
+
+# ------------------------------------------------------------------------------
+# mypy
+# ------------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+
+# ------------------------------------------------------------------------------
+# bandit (security linter)
+# ------------------------------------------------------------------------------
+[tool.bandit]
+exclude_dirs = ["backend/tests", "fine_tune"]
+skips = ["B101"]  # assert is fine in tests

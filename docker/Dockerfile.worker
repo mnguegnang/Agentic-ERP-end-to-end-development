@@ -1,0 +1,16 @@
+# Celery worker for optional async solver offloading (Blueprint §1.1.1).
+# Stage 6 implementation — wired when solver latency exceeds WebSocket timeout.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt celery==5.4.0
+
+COPY . .
+
+CMD ["celery", "-A", "app.worker", "worker", "--loglevel=info", "--concurrency=2"]
