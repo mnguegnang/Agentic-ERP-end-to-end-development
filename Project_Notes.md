@@ -59,3 +59,44 @@
 - [ ] Confirm AdventureWorks dataset source (dump file URL or generate from scratch) — needed for Stage 2 seed scripts
 - [ ] Confirm LangSmith project name (currently `agentic-erp-supply-chain` in config.yaml)
 - [ ] Node.js 22 LTS nvm installation — verify before frontend scaffolding (Stage 3)
+
+### ADR-004 — asyncpg for Seed Scripts (not SQLAlchemy ORM)
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-14 |
+| **Blueprint spec** | Stage 2 seed scripts implicitly assumed ORM |
+| **Decision** | Use `asyncpg` directly for `seed_adventureworks.py`, `seed_contracts.py`, `seed_neo4j.py` |
+| **Rationale** | Bulk insert performance; `pgvector.asyncpg.register_vector(conn)` required for vector inserts via asyncpg; ORM adds unnecessary overhead for one-time seed operations |
+| **Status** | Active |
+
+### ADR-005 — Synthetic Contracts as .txt (not PDF)
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-14 |
+| **Blueprint spec** | §2.1.3 — "Generate 20 synthetic supplier contracts as PDFs" |
+| **Decision** | Contracts stored as `.txt` files in `data/contracts/` |
+| **Rationale** | `fpdf2` and `reportlab` are not in blueprint `requirements.txt`. Text content (~1500 words, 5 FM variants) is fully representative. CRAG embedding pipeline (chunk → BGE embed → pgvector insert) is identical regardless of source format. |
+| **Impact** | None on downstream CRAG evaluation (recall@5 metric unaffected). |
+| **Status** | Active |
+
+### ADR-006 — pytest pythonpath = ["backend"]
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-14 |
+| **Blueprint spec** | Not specified |
+| **Decision** | Added `pythonpath = ["backend"]` to `[tool.pytest.ini_options]` in `pyproject.toml` |
+| **Rationale** | `backend/` contains `app/` and `scripts/` packages; pytest runs from repo root. Setting pythonpath ensures `from app.*` and `from scripts.*` resolve correctly without creating a spurious `backend/__init__.py`. |
+| **Status** | Active |
+
+### ADR-007 — Chunker Boundary: Single Chunk Requires ≤ CHUNK_SIZE − CHUNK_OVERLAP Words
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-14 |
+| **Blueprint spec** | §2.3 — 512-token chunks, 50-token overlap |
+| **Decision** | Sliding window advances by `chunk_size − overlap` (462 words); text ≤ 462 words → 1 chunk; text of exactly 512 words produces 2 chunks (full + trailing overlap) |
+| **Rationale** | Standard sliding-window chunking behavior. Test `test_exact_chunk_size_one_chunk` was renamed to `test_up_to_step_boundary_is_one_chunk` and corrected to use `CHUNK_SIZE − CHUNK_OVERLAP` words. |
+| **Status** | Active |

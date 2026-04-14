@@ -2,6 +2,7 @@
 
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
 from ortools.sat.python import cp_model
@@ -23,5 +24,5 @@ def solve_disruption(
         {status, total_cost, allocations: [{supplier, component, quantity}]}
     """
     # TODO Stage 4: CP-SAT MIP with capacity + demand constraints
-    model = cp_model.CpModel()
+    model = cp_model.CpModel()  # noqa: F841
     return {"status": "NOT_IMPLEMENTED", "total_cost": 0, "allocations": []}

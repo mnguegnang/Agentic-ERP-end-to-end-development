@@ -1,12 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes_health import router as health_router
 from app.api.routes_chat import router as chat_router
+from app.api.routes_health import router as health_router
 
 app = FastAPI(
     title="Agentic ERP Supply Chain Copilot",
-    description="Multi-agent LLM + deterministic OR solvers for supply-chain decision intelligence.",
+    description=(
+        "Multi-agent LLM + deterministic OR solvers for supply-chain decision intelligence."
+    ),
     version="0.1.0",
 )
 

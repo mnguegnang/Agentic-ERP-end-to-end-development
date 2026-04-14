@@ -3,6 +3,7 @@
 Exposes search_contracts via CRAG hybrid retrieval pipeline.
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP

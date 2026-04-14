@@ -3,6 +3,7 @@
 Determines whether top retrieved chunk is relevant to the query.
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
 # Evaluation labels

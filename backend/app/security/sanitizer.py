@@ -2,6 +2,7 @@
 
 Stage 4 will add presidio-analyzer for more comprehensive PII detection.
 """
+
 from __future__ import annotations
 
 import re

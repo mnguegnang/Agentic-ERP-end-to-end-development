@@ -2,13 +2,16 @@
 
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
 CHUNK_SIZE = 512
 CHUNK_OVERLAP = 50
 
 
-def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
+def chunk_text(
+    text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP
+) -> list[str]:
     """Split text into overlapping token-approximate chunks.
 
     Uses whitespace tokenisation as an approximation; Stage 4 will switch to a

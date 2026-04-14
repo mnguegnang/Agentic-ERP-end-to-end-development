@@ -42,6 +42,7 @@ def _load_yaml() -> dict:
 # Non-secret values (model names, thresholds) are read via @property from YAML.
 # ---------------------------------------------------------------------------
 
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=str(_REPO_ROOT / ".env"),

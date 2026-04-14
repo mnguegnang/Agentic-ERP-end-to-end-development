@@ -2,10 +2,13 @@
 
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
-from ortools.constraint_solver import routing_enums_pb2
-from ortools.constraint_solver import pywrapcp
+from ortools.constraint_solver import (
+    pywrapcp,  # noqa: F401
+    routing_enums_pb2,  # noqa: F401
+)
 
 
 def solve_vrp(

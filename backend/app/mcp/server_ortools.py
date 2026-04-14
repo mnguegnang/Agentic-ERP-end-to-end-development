@@ -3,20 +3,23 @@
 Exposes solve_mcnf, solve_jsp, solve_vrp, solve_disruption.
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
 
-from app.solvers.mcnf import solve_mcnf
-from app.solvers.jsp import solve_jsp
-from app.solvers.vrp import solve_vrp
 from app.solvers.disruption import solve_disruption
+from app.solvers.jsp import solve_jsp
+from app.solvers.mcnf import solve_mcnf
+from app.solvers.vrp import solve_vrp
 
 mcp = FastMCP("mcp-solver-ortools")
 
 
 @mcp.tool()
-async def tool_solve_mcnf(nodes: list[str], arcs: list[dict], commodities: list[dict]) -> dict:
+async def tool_solve_mcnf(
+    nodes: list[str], arcs: list[dict], commodities: list[dict]
+) -> dict:
     """Min-cost network flow via OR-Tools GLOP."""
     return solve_mcnf(nodes, arcs, commodities)
 

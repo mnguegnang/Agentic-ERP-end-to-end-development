@@ -2,6 +2,7 @@
 
 Stage 4 implementation. Stub provided for scaffolding.
 """
+
 from __future__ import annotations
 
 from app.agents.graph_state import AgentState

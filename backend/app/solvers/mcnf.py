@@ -2,6 +2,7 @@
 
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
 from ortools.linear_solver import pywraplp
@@ -22,5 +23,15 @@ def solve_mcnf(
     # TODO Stage 4: full GLOP LP formulation
     solver = pywraplp.Solver.CreateSolver("GLOP")
     if not solver:
-        return {"status": "SOLVER_UNAVAILABLE", "total_cost": 0.0, "flows": [], "shadow_prices": []}
-    return {"status": "NOT_IMPLEMENTED", "total_cost": 0.0, "flows": [], "shadow_prices": []}
+        return {
+            "status": "SOLVER_UNAVAILABLE",
+            "total_cost": 0.0,
+            "flows": [],
+            "shadow_prices": [],
+        }
+    return {
+        "status": "NOT_IMPLEMENTED",
+        "total_cost": 0.0,
+        "flows": [],
+        "shadow_prices": [],
+    }

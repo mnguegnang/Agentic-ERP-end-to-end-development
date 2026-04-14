@@ -3,6 +3,7 @@
 Exposes query_erp and get_product_bom tools over the MCP protocol.
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP

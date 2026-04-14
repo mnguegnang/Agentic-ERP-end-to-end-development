@@ -2,6 +2,7 @@
 
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
 from ortools.sat.python import cp_model
@@ -21,7 +22,7 @@ def solve_jsp(
         {status, makespan, schedule: [{job, op, machine, start, end}]}
     """
     # TODO Stage 4: CP-SAT no-overlap + precedence constraints
-    model = cp_model.CpModel()
+    model = cp_model.CpModel()  # noqa: F841
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = time_limit_sec
     return {"status": "NOT_IMPLEMENTED", "makespan": 0, "schedule": []}

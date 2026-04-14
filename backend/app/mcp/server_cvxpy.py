@@ -3,12 +3,13 @@
 Exposes solve_robust_minmax, solve_meio_gsm.
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
 
-from app.solvers.robust_minmax import solve_robust_minmax
 from app.solvers.meio_gsm import solve_meio_gsm
+from app.solvers.robust_minmax import solve_robust_minmax
 
 mcp = FastMCP("mcp-solver-cvxpy")
 

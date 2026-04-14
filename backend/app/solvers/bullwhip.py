@@ -2,10 +2,11 @@
 
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
-import numpy as np
-from scipy import stats
+import numpy as np  # noqa: F401
+from scipy import stats  # noqa: F401
 
 
 def analyze_bullwhip(

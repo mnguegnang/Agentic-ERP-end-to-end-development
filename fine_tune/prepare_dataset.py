@@ -5,6 +5,7 @@ Stage 6 implementation (post M6 — 5K+ traces collected).
 Usage (on Lightning AI L4):
     python fine_tune/prepare_dataset.py
 """
+
 from __future__ import annotations
 
 import logging

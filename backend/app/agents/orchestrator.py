@@ -2,6 +2,7 @@
 
 Stage 4 implementation. Stubs provided for scaffolding.
 """
+
 from __future__ import annotations
 
 from app.agents.graph_state import AgentState
@@ -18,8 +19,15 @@ def route_by_intent(state: AgentState) -> str:
     intent = state.get("intent", "")
     if intent == "kg_query":
         return "kg_query"
-    if intent in ("mcnf_solve", "disruption_resource", "meio_optimize",
-                  "bullwhip_analyze", "jsp_schedule", "vrp_route", "robust_allocate"):
+    if intent in (
+        "mcnf_solve",
+        "disruption_resource",
+        "meio_optimize",
+        "bullwhip_analyze",
+        "jsp_schedule",
+        "vrp_route",
+        "robust_allocate",
+    ):
         return "or_solve"
     if intent == "contract_query":
         return "contract_query"

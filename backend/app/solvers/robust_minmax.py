@@ -2,9 +2,10 @@
 
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
-import cvxpy as cp
+import cvxpy as cp  # noqa: F401
 
 
 def solve_robust_minmax(
@@ -23,4 +24,9 @@ def solve_robust_minmax(
         {status, total_cost, allocations, price_of_robustness}
     """
     # TODO Stage 4: SOCP formulation with ECOS solver
-    return {"status": "NOT_IMPLEMENTED", "total_cost": 0.0, "allocations": [], "price_of_robustness": 0.0}
+    return {
+        "status": "NOT_IMPLEMENTED",
+        "total_cost": 0.0,
+        "allocations": [],
+        "price_of_robustness": 0.0,
+    }

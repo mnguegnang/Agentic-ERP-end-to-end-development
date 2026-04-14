@@ -3,6 +3,7 @@
 All queries are parameterised. No Cypher is constructed from raw LLM output.
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
 # Whitelisted query registry: maps query_type -> parameterised Cypher template

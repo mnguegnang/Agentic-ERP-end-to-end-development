@@ -2,9 +2,10 @@
 
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
-import cvxpy as cp
+import cvxpy as cp  # noqa: F401
 
 
 def solve_meio_gsm(
@@ -21,4 +22,9 @@ def solve_meio_gsm(
         {status, total_ss_cost, service_times, safety_stocks}
     """
     # TODO Stage 4: GSM convex formulation with SCS solver
-    return {"status": "NOT_IMPLEMENTED", "total_ss_cost": 0.0, "service_times": [], "safety_stocks": []}
+    return {
+        "status": "NOT_IMPLEMENTED",
+        "total_ss_cost": 0.0,
+        "service_times": [],
+        "safety_stocks": [],
+    }

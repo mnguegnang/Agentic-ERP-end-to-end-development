@@ -3,6 +3,7 @@
 Exposes traverse_supply_network, find_affected_products, get_supplier_alternatives.
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP

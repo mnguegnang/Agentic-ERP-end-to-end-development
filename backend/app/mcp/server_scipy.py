@@ -3,6 +3,7 @@
 Exposes analyze_bullwhip.
 Stage 4 implementation.
 """
+
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
