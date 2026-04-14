@@ -1,13 +1,18 @@
 """Neo4j async client (Blueprint §4.3.4).
 
-Stage 4 implementation.
+Provides a lazily-initialised singleton driver and a safe read helper
+that only executes whitelisted Cypher from kg/queries.py.
 """
 
 from __future__ import annotations
 
+import logging
+
 from neo4j import AsyncDriver, AsyncGraphDatabase
 
 from app.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 _driver: AsyncDriver | None = None
 
@@ -27,3 +32,32 @@ async def close_driver() -> None:
     if _driver:
         await _driver.close()
         _driver = None
+
+
+async def execute_read(cypher: str, **params: object) -> list[dict]:
+    """Execute a read-only Cypher query and return rows as plain dicts.
+
+    Only whitelisted Cypher strings from kg/queries.py should be passed here.
+    The helper does NOT accept raw LLM-generated Cypher — callers must look up
+    the query template from ``app.kg.queries.QUERIES`` before calling this.
+
+    Parameters
+    ----------
+    cypher:
+        Parameterised Cypher string (from the whitelist).
+    **params:
+        Named parameters bound to the Cypher placeholders.
+
+    Returns
+    -------
+    list[dict]
+        Rows from ``result.data()``.  Empty list on failure.
+    """
+    try:
+        driver = await get_driver()
+        async with driver.session() as session:
+            result = await session.run(cypher, **params)
+            return await result.data()
+    except Exception as exc:
+        logger.warning("execute_read failed: %s", exc)
+        return []

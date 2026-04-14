@@ -1,12 +1,14 @@
 """MCP server: mcp-contract-rag (Blueprint §4.3.5).
 
-Exposes search_contracts via CRAG hybrid retrieval pipeline.
-Stage 4 implementation.
+Exposes search_contracts via the CRAG hybrid retrieval pipeline:
+  pgvector dense + BM25 sparse → RRF → CrossEncoder rerank → LLM evaluation.
 """
 
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
+
+from app.rag.retriever import retrieve_and_evaluate
 
 mcp = FastMCP("mcp-contract-rag")
 
@@ -18,5 +20,9 @@ async def search_contracts(
     top_k: int = 5,
 ) -> dict:
     """Hybrid dense+BM25 retrieval → cross-encoder rerank → CRAG evaluation."""
-    # TODO Stage 4: wire to rag/retriever.py retrieve_and_evaluate()
-    return {"documents": [], "evaluation": "not_implemented"}
+    result = await retrieve_and_evaluate(query, supplier_id=supplier_id, top_k=top_k)
+    return {
+        "documents": result.documents,
+        "evaluation": result.evaluation,
+        "fallback": result.fallback,
+    }

@@ -17,7 +17,10 @@ class AgentState(TypedDict):
     solver_input: dict | None  # MCP-validated solver parameters
     solver_output: dict | None  # raw OR solver result
     kg_subgraph: dict | None  # Neo4j traversal result {nodes, edges, paths}
+    kg_entities: list[str] | None  # entities extracted by KG agent (Stage 4)
+    kg_relation_path: list[str] | None  # KG traversal relation path (Stage 4)
     rag_documents: list[dict] | None  # retrieved + reranked contract chunks
     rag_evaluation: str | None  # "correct" | "ambiguous" | "incorrect"
     human_approval_required: bool  # True → WebSocket approval request to frontend
+    final_response: str | None  # synthesized final answer for user (Stage 4)
     error: str | None

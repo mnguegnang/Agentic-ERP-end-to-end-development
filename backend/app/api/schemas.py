@@ -3,6 +3,7 @@
 Scope (Pydantic boundary rule):
     ✓  API request/response contracts (WsMessage, WsResponse)
     ✓  MCP tool input schemas (Arc, Commodity, SolveMcnfInput)
+    ✓  Stage 4 structured LLM output schemas
     ✗  Solver hot-paths (plain dicts passed to OR-Tools)
     ✗  Data-pipeline internals
 """
@@ -30,6 +31,9 @@ class WsResponse(BaseModel):
     content: str
     tool_used: str | None = None
     solver_result: dict | None = None
+    intent: str | None = None  # populated by Stage 4 orchestrator
+    rag_documents: list[dict] | None = None  # populated by Stage 4 CRAG agent
+    human_approval_required: bool = False  # True → frontend shows approval dialog
 
 
 # ---------------------------------------------------------------------------
@@ -78,4 +82,85 @@ class SolveMcnfInput(BaseModel):
     )
     commodities: list[Commodity] = Field(
         ..., min_length=1, description="Commodities to route (source, sink, demand)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Stage 4: Structured LLM output schemas (Blueprint §4.2, §4.5)
+# ---------------------------------------------------------------------------
+
+#: All valid intent labels (Blueprint §4.2 Table)
+VALID_INTENTS: frozenset[str] = frozenset(
+    {
+        "kg_query",
+        "mcnf_solve",
+        "disruption_resource",
+        "meio_optimize",
+        "bullwhip_analyze",
+        "jsp_schedule",
+        "vrp_route",
+        "robust_allocate",
+        "contract_query",
+        "multi_step",
+    }
+)
+
+
+class IntentClassification(BaseModel):
+    """Structured output for intent classification (Blueprint §4.2).
+
+    Used with ``llm.with_structured_output(IntentClassification)``.
+    """
+
+    intent: str = Field(
+        ...,
+        description=(
+            "One of: kg_query, mcnf_solve, disruption_resource, meio_optimize, "
+            "bullwhip_analyze, jsp_schedule, vrp_route, robust_allocate, "
+            "contract_query, multi_step"
+        ),
+    )
+    intent_confidence: float = Field(
+        ..., ge=0.0, le=1.0, description="Confidence score 0.0-1.0"
+    )
+    ddd_context: str = Field(
+        ...,
+        description=(
+            "DDD bounded context: 'visibility' | 'inventory' | "
+            "'compliance' | 'sourcing' | 'logistics'"
+        ),
+    )
+    reasoning: str = Field(
+        ..., description="One-sentence reasoning for the classification"
+    )
+
+
+class EntityExtractionResult(BaseModel):
+    """Structured output for KG entity extraction (Blueprint §4.5)."""
+
+    entities: list[str] = Field(
+        ..., description="Supply-chain entity names extracted from the query"
+    )
+    entity_types: list[str] = Field(
+        ...,
+        description=(
+            "Entity type for each entity: "
+            "'Supplier' | 'Component' | 'Product' | 'DistributionCenter'"
+        ),
+    )
+
+
+class RelationSelectionResult(BaseModel):
+    """Structured output for KG traversal relation path selection (Blueprint §4.5)."""
+
+    relation_path: list[str] = Field(
+        ...,
+        description=(
+            "Ordered list of Neo4j relationship types to traverse. "
+            "Valid types: PROVIDES, SUPPLIED_BY, USED_IN, STORED_AT, "
+            "SHIPS_TO, ALTERNATIVE_FOR, MANAGED_BY, DISRUPTS"
+        ),
+    )
+    reasoning: str = Field(
+        ..., description="One-sentence reasoning for the chosen traversal path"
     )
