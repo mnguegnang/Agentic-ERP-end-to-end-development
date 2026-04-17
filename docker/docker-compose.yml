@@ -1,10 +1,9 @@
 # NOTE (ADR-004): docker-compose.yml lives in docker/ so volume paths relative to
 # the project root use ../ prefix. Blueprint §6.1 shows ./data/ which would resolve
 # to docker/data/ — corrected to ../data/ to match the §1.1.1 directory layout.
-version: "3.9"
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: adventureworks
       POSTGRES_USER: aw_user
@@ -48,6 +47,8 @@ services:
       context: ../backend
       dockerfile: ../docker/Dockerfile.api
     ports: ["8000:8000"]
+    volumes:
+      - ../config.yaml:/config.yaml:ro
     environment:
       DATABASE_URL: postgresql+asyncpg://aw_user:${PG_PASSWORD}@postgres:5432/adventureworks
       NEO4J_URI: bolt://neo4j:7687
