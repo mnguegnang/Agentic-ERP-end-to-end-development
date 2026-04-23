@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react'
 import { Network, Options } from 'vis-network'
-import { DataSet } from 'vis-data'
 
 // TODO Stage 3: wire real kg_subgraph from AgentState via WebSocket message
 
@@ -26,7 +25,6 @@ const NETWORK_OPTIONS: Options = {
     color: { color: '#4b5563' },
   },
   physics: { stabilization: { iterations: 100 } },
-  background: { color: 'transparent' },
 }
 
 const GraphViewer: React.FC<GraphViewerProps> = ({ subgraph }) => {
@@ -35,9 +33,11 @@ const GraphViewer: React.FC<GraphViewerProps> = ({ subgraph }) => {
 
   useEffect(() => {
     if (!containerRef.current) return
-    const nodes = new DataSet(subgraph?.nodes ?? [])
-    const edges = new DataSet(subgraph?.edges ?? [])
-    networkRef.current = new Network(containerRef.current, { nodes, edges }, NETWORK_OPTIONS)
+    networkRef.current = new Network(
+      containerRef.current,
+      { nodes: subgraph?.nodes ?? [], edges: subgraph?.edges ?? [] },
+      NETWORK_OPTIONS,
+    )
     return () => networkRef.current?.destroy()
   }, [subgraph])
 

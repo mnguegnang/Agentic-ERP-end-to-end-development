@@ -3,7 +3,6 @@
 Scope (Pydantic boundary rule):
     ✓  API request/response contracts (WsMessage, WsResponse)
     ✓  MCP tool input schemas (Arc, Commodity, SolveMcnfInput)
-    ✓  Stage 4 structured LLM output schemas
     ✗  Solver hot-paths (plain dicts passed to OR-Tools)
     ✗  Data-pipeline internals
 """
@@ -11,6 +10,7 @@ Scope (Pydantic boundary rule):
 from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
+
 
 # ---------------------------------------------------------------------------
 # WebSocket message schemas
@@ -32,8 +32,11 @@ class WsResponse(BaseModel):
     tool_used: str | None = None
     solver_result: dict | None = None
     intent: str | None = None  # populated by Stage 4 orchestrator
+    intent_confidence: float | None = None
     rag_documents: list[dict] | None = None  # populated by Stage 4 CRAG agent
     human_approval_required: bool = False  # True → frontend shows approval dialog
+    decision_id: str | None = None  # UUID for the pending HiTL approval stored in Redis
+    error: str | None = None  # error message if orchestrator raised an exception
 
 
 # ---------------------------------------------------------------------------
@@ -121,14 +124,11 @@ class IntentClassification(BaseModel):
         ),
     )
     intent_confidence: float = Field(
-        ..., ge=0.0, le=1.0, description="Confidence score 0.0-1.0"
+        ..., ge=0.0, le=1.0, description="Confidence score 0.0–1.0"
     )
     ddd_context: str = Field(
         ...,
-        description=(
-            "DDD bounded context: 'visibility' | 'inventory' | "
-            "'compliance' | 'sourcing' | 'logistics'"
-        ),
+        description="DDD bounded context: 'visibility' | 'inventory' | 'compliance'",
     )
     reasoning: str = Field(
         ..., description="One-sentence reasoning for the classification"
@@ -157,8 +157,7 @@ class RelationSelectionResult(BaseModel):
         ...,
         description=(
             "Ordered list of Neo4j relationship types to traverse. "
-            "Valid types: PROVIDES, SUPPLIED_BY, USED_IN, STORED_AT, "
-            "SHIPS_TO, ALTERNATIVE_FOR, MANAGED_BY, DISRUPTS"
+            "Valid types: PROVIDES, USED_IN, PROCESSED_AT, SHIPS_TO, BOUND_BY, SUPPLIED_BY"
         ),
     )
     reasoning: str = Field(

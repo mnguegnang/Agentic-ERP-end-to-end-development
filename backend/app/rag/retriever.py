@@ -209,4 +209,7 @@ async def retrieve_and_evaluate(
     top_doc = reranked[0]
     evaluation = await evaluate_relevance(query, top_doc)
 
+    if evaluation == INCORRECT:
+        return CRAGResult(documents=[], evaluation=INCORRECT, fallback="no_answer")
+
     return CRAGResult(documents=reranked, evaluation=evaluation)

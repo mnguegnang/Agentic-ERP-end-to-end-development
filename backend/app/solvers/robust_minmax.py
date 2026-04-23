@@ -5,7 +5,9 @@ Stage 4 implementation.
 
 from __future__ import annotations
 
-import cvxpy as cp  # noqa: F401
+# cvxpy import deferred until SOCP formulation is implemented (Stage 5).
+# Importing now triggers a version-conflict warning because
+# cvxpy 1.6.x only recognises ortools < 9.10 for its GLOP backend.
 
 
 def solve_robust_minmax(

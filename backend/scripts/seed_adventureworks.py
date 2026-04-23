@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import datetime
 import logging
 from pathlib import Path
 
@@ -431,6 +432,8 @@ async def main() -> None:
         contracts_dir.mkdir(parents=True, exist_ok=True)
         logger.info("Seeding %d contract records…", len(CONTRACT_DEFS))
         for i, (sup_idx, eff_date, exp_date) in enumerate(CONTRACT_DEFS):
+            eff_date = datetime.date.fromisoformat(eff_date)
+            exp_date = datetime.date.fromisoformat(exp_date)
             contract_num = i + 1
             txt_path = contracts_dir / f"contract_{contract_num:02d}.txt"
             sup_vid = vendor_ids[sup_idx]

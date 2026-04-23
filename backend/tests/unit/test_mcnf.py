@@ -11,6 +11,7 @@ from unittest.mock import MagicMock
 
 from app.solvers.mcnf import solve_mcnf
 
+
 # ---------------------------------------------------------------------------
 # Optimality tests — 4 hand-solved LP instances
 # ---------------------------------------------------------------------------

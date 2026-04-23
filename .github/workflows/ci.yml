@@ -9,6 +9,9 @@ on:
       - master
 
 jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # JOB 1 — Backend quality gate: lint, type check, security, unit tests
+  # ──────────────────────────────────────────────────────────────────────────
   backend-quality:
     runs-on: ubuntu-latest
     defaults:
@@ -43,6 +46,9 @@ jobs:
       - name: Unit tests (pytest)
         run: pytest backend/tests/unit/ -v --tb=short
 
+  # ──────────────────────────────────────────────────────────────────────────
+  # JOB 2 — Frontend quality gate: type check
+  # ──────────────────────────────────────────────────────────────────────────
   frontend-quality:
     runs-on: ubuntu-latest
     defaults:
@@ -65,3 +71,261 @@ jobs:
 
       - name: Type check (tsc)
         run: npx tsc --noEmit
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # JOB 3 — Integration tests (Blueprint §6.6)
+  # Runs CRAG Recall@5, M6 agent eval harness, and orchestrator integration
+  # tests against live service containers (Postgres + Neo4j + Redis).
+  # ──────────────────────────────────────────────────────────────────────────
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: [backend-quality]
+    env:
+      PYTHONPATH: backend
+      POSTGRES_USER: erp
+      POSTGRES_PASSWORD: erp_test_pass
+      POSTGRES_DB: erp_test
+      NEO4J_URI: bolt://localhost:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: test_password_12345
+      REDIS_URL: redis://localhost:6379/0
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      LLM_MODEL: gpt-4o
+      LLM_BASE_URL: https://models.inference.ai.azure.com
+      INTENT_CONFIDENCE_THRESHOLD: "0.7"
+      HUMAN_APPROVAL_COST_THRESHOLD: "10000.0"
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: erp
+          POSTGRES_PASSWORD: erp_test_pass
+          POSTGRES_DB: erp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U erp -d erp_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+      neo4j:
+        image: neo4j:5.26
+        env:
+          NEO4J_AUTH: neo4j/test_password_12345
+          NEO4J_PLUGINS: '["apoc"]'
+          NEO4J_dbms_security_procedures_unrestricted: apoc.*
+        ports:
+          - 7687:7687
+          - 7474:7474
+        options: >-
+          --health-cmd "wget -qO- http://localhost:7474 || exit 1"
+          --health-interval 15s
+          --health-timeout 10s
+          --health-retries 12
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install backend dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run DB migrations
+        run: alembic -c backend/alembic.ini upgrade head
+        env:
+          DATABASE_URL: postgresql+asyncpg://erp:erp_test_pass@localhost:5432/erp_test
+
+      - name: Run integration tests (§6.6)
+        run: |
+          pytest backend/tests/integration/ -v --tb=short \
+            -m "not slow" \
+            --junitxml=test-results/integration.xml
+
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: test-results/integration.xml
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # JOB 4 — Red-team security tests (Blueprint §5.1.3, §6.6)
+  # Runs prompt injection, SQL/Cypher injection, and promptfoo adversarial suite.
+  # ──────────────────────────────────────────────────────────────────────────
+  red-team:
+    runs-on: ubuntu-latest
+    needs: [backend-quality]
+    env:
+      PYTHONPATH: backend
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      LLM_MODEL: gpt-4o
+      LLM_BASE_URL: https://models.inference.ai.azure.com
+      INTENT_CONFIDENCE_THRESHOLD: "0.7"
+      HUMAN_APPROVAL_COST_THRESHOLD: "10000.0"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install backend dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Install promptfoo
+        run: npm install -g promptfoo@0.100.0
+
+      - name: Run promptfoo adversarial suite (§5.1.3)
+        working-directory: backend/tests/red_team
+        run: |
+          promptfoo eval \
+            --config promptfoo.yaml \
+            --output promptfoo-results.json \
+            --no-cache
+        env:
+          PROMPTFOO_DISABLE_TELEMETRY: "1"
+
+      - name: Run pytest red-team suite (§5.1.3)
+        run: |
+          pytest backend/tests/red_team/ -v --tb=short \
+            --junitxml=test-results/red-team.xml
+
+      - name: Upload red-team results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: red-team-results
+          path: |
+            backend/tests/red_team/promptfoo-results.json
+            test-results/red-team.xml
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # JOB 5 — Build and push container images to Azure Container Registry (§6.6)
+  # Only runs on master branch after ALL quality and security gates pass.
+  # ──────────────────────────────────────────────────────────────────────────
+  build-and-push-images:
+    runs-on: ubuntu-latest
+    needs: [backend-quality, frontend-quality, integration-tests, red-team]
+    if: github.ref == 'refs/heads/master'
+    permissions:
+      id-token: write  # Required for azure/login@v2 with OIDC federation
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC federation)
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to Azure Container Registry
+        run: az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Set image tags
+        id: tags
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "api_tag=${{ secrets.ACR_NAME }}.azurecr.io/agentic-erp-api:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "frontend_tag=${{ secrets.ACR_NAME }}.azurecr.io/agentic-erp-frontend:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "api_latest=${{ secrets.ACR_NAME }}.azurecr.io/agentic-erp-api:latest" >> "$GITHUB_OUTPUT"
+          echo "frontend_latest=${{ secrets.ACR_NAME }}.azurecr.io/agentic-erp-frontend:latest" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push API image
+        run: |
+          docker build \
+            --file backend/Dockerfile \
+            --tag ${{ steps.tags.outputs.api_tag }} \
+            --tag ${{ steps.tags.outputs.api_latest }} \
+            --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --build-arg GIT_SHA=${{ steps.tags.outputs.short_sha }} \
+            --cache-from ${{ steps.tags.outputs.api_latest }} \
+            .
+          docker push ${{ steps.tags.outputs.api_tag }}
+          docker push ${{ steps.tags.outputs.api_latest }}
+
+      - name: Build and push frontend image
+        run: |
+          docker build \
+            --file frontend/Dockerfile \
+            --tag ${{ steps.tags.outputs.frontend_tag }} \
+            --tag ${{ steps.tags.outputs.frontend_latest }} \
+            --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --build-arg GIT_SHA=${{ steps.tags.outputs.short_sha }} \
+            --cache-from ${{ steps.tags.outputs.frontend_latest }} \
+            .
+          docker push ${{ steps.tags.outputs.frontend_tag }}
+          docker push ${{ steps.tags.outputs.frontend_latest }}
+
+      - name: Save image metadata as artifact
+        run: |
+          echo "{\"api_tag\": \"${{ steps.tags.outputs.api_tag }}\", \"frontend_tag\": \"${{ steps.tags.outputs.frontend_tag }}\", \"short_sha\": \"${{ steps.tags.outputs.short_sha }}\"}" \
+            > image-metadata.json
+
+      - name: Upload image metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-metadata
+          path: image-metadata.json
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # JOB 6 — Trigger deployment workflow in Agentic-ERP-Deploy repo (§6.6)
+  # Fires a repository_dispatch event that initiates the deploy pipeline.
+  # ──────────────────────────────────────────────────────────────────────────
+  trigger-deploy:
+    runs-on: ubuntu-latest
+    needs: [build-and-push-images]
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Download image metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: image-metadata
+
+      - name: Dispatch deploy event to Agentic-ERP-Deploy
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.DEPLOY_REPO_PAT }}
+          script: |
+            const fs = require('fs');
+            const metadata = JSON.parse(fs.readFileSync('image-metadata.json', 'utf8'));
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: 'Agentic-ERP-Deploy',
+              event_type: 'deploy',
+              client_payload: {
+                api_tag: metadata.api_tag,
+                frontend_tag: metadata.frontend_tag,
+                short_sha: metadata.short_sha,
+                triggered_by: context.actor,
+                source_run_id: context.runId.toString(),
+                source_sha: context.sha,
+              },
+            });
+            core.info(`Deploy dispatch sent for SHA ${metadata.short_sha}`);
+

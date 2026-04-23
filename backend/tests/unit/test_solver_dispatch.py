@@ -12,8 +12,10 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from app.agents.graph_state import AgentState
 from app.agents.orchestrator import solver_dispatch_node
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -50,22 +52,10 @@ def _make_state(intent: str) -> AgentState:
     [
         ("jsp_schedule", "app.agents.orchestrator.solve_jsp", "solve_jsp"),
         ("vrp_route", "app.agents.orchestrator.solve_vrp", "solve_vrp"),
-        (
-            "robust_allocate",
-            "app.agents.orchestrator.solve_robust_minmax",
-            "solve_robust_minmax",
-        ),
+        ("robust_allocate", "app.agents.orchestrator.solve_robust_minmax", "solve_robust_minmax"),
         ("meio_optimize", "app.agents.orchestrator.solve_meio_gsm", "solve_meio_gsm"),
-        (
-            "bullwhip_analyze",
-            "app.agents.orchestrator.analyze_bullwhip",
-            "analyze_bullwhip",
-        ),
-        (
-            "disruption_resource",
-            "app.agents.orchestrator.solve_disruption",
-            "solve_disruption",
-        ),
+        ("bullwhip_analyze", "app.agents.orchestrator.analyze_bullwhip", "analyze_bullwhip"),
+        ("disruption_resource", "app.agents.orchestrator.solve_disruption", "solve_disruption"),
     ],
 )
 async def test_solver_dispatch_calls_correct_solver(
@@ -106,13 +96,10 @@ async def test_solver_dispatch_mcnf_param_extraction_called() -> None:
     mock_solver = MagicMock(return_value={"status": "OPTIMAL", "total_cost": 250.0})
     state = _make_state("mcnf_solve")
 
-    with (
-        patch(
-            "app.agents.orchestrator._extract_mcnf_params",
-            AsyncMock(return_value=mock_params),
-        ),
-        patch("app.agents.orchestrator.solve_mcnf", mock_solver),
-    ):
+    with patch(
+        "app.agents.orchestrator._extract_mcnf_params",
+        AsyncMock(return_value=mock_params),
+    ), patch("app.agents.orchestrator.solve_mcnf", mock_solver):
         result = await solver_dispatch_node(state)
 
     mock_solver.assert_called_once()

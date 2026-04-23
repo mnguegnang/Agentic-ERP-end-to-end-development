@@ -1,0 +1,120 @@
+SUPPLY AGREEMENT
+================
+Contract No.: 0012
+Date:         2025-04-01
+Buyer:        Adventure Works Cycles, Inc., 1 Microsoft Way, Redmond, WA 98052, USA
+Supplier:     TQ-Sub Components GmbH
+Account:      TQ-SUB-006
+Effective:    2025-04-01
+Expiry:       2027-03-31
+
+RECITALS
+
+WHEREAS, Buyer desires to purchase certain goods and components from Supplier;
+WHEREAS, Supplier desires to supply such goods on the terms and conditions set forth herein;
+NOW, THEREFORE, in consideration of the mutual covenants contained herein, the parties agree as follows:
+
+SECTION 1 — DEFINITIONS
+
+1.1  "Agreement" means this Supply Agreement together with all Exhibits attached hereto.
+1.2  "Goods" means all components, materials, and assemblies listed in Exhibit A — Product Schedule.
+1.3  "Purchase Order" or "PO" means a written order issued by Buyer referencing this Agreement.
+1.4  "Delivery Date" means the date specified in the applicable Purchase Order.
+1.5  "Specifications" means the technical requirements set forth in Exhibit B — Technical Specifications.
+1.6  "Confidential Information" means any non-public information disclosed by one party to the other.
+1.7  "Intellectual Property" means patents, trademarks, trade secrets, copyrights, and related rights.
+
+SECTION 2 — TERM AND RENEWAL
+
+2.1  Initial Term. This Agreement shall commence on 2025-04-01 and shall continue in full force and effect until 2027-03-31 (the "Initial Term"), unless terminated earlier in accordance with Section 16.
+2.2  Renewal. Upon expiry of the Initial Term, this Agreement shall automatically renew for successive one-year periods unless either party provides written notice of non-renewal at least ninety (90) days prior to the end of the then-current term.
+2.3  Survival. Sections 9 (Confidentiality), 14 (Limitation of Liability), and 20 (Governing Law) shall survive termination or expiry of this Agreement.
+
+SECTION 3 — PRICING AND VOLUME COMMITMENTS
+
+3.1  Pricing. The prices for Goods shall be as set forth in the Purchase Order, which shall be consistent with Exhibit A. Prices are in United States Dollars (USD) unless otherwise specified.
+3.2  Price Stability. Supplier guarantees that prices shall remain fixed for the first twelve (12) months of the Initial Term. Thereafter, Supplier may propose price adjustments of no more than three percent (3%) per annum, provided sixty (60) days written notice is given.
+3.3  Volume Discounts. Buyer shall be entitled to volume discounts as follows: (a) 2% discount on annual spend exceeding USD 500,000; (b) 4% discount on annual spend exceeding USD 1,000,000.
+3.4  Most Favored Customer. Supplier represents that the prices offered hereunder are no less favourable than those offered to any similarly-situated customer for comparable quantities and quality of Goods.
+
+SECTION 4 — PAYMENT TERMS
+
+4.1  Standard Terms. Payment shall be due net thirty (30) days from the date of Supplier's invoice, provided that the invoice is accurate and complete.
+4.2  Disputes. Buyer may withhold payment of disputed amounts, provided that Buyer notifies Supplier in writing within ten (10) business days of receipt of the invoice.
+4.3  Late Payment. Undisputed amounts not paid within thirty (30) days shall bear interest at one and one-half percent (1.5%) per month, or the maximum rate permitted by applicable law, whichever is lower.
+4.4  Currency. All invoices shall be denominated and paid in United States Dollars unless mutually agreed in writing.
+
+SECTION 5 — SHIPMENT AND DELIVERY
+
+5.1  Incoterms. Goods shall be delivered DAP (Delivered At Place) to Buyer's designated facility.
+5.2  Packing. Supplier shall pack all Goods in a manner suitable for safe transport, using materials consistent with industry standards for the type of Good shipped.
+5.3  Risk of Loss. Risk of loss and title to Goods shall transfer to Buyer in accordance with the applicable Incoterms designation.
+5.4  Shipping Documentation. Each shipment shall be accompanied by a packing slip, certificate of conformance, and, where applicable, a certificate of origin.
+5.5  Partial Shipments. Partial shipments are permissible only with Buyer's prior written consent.
+
+SECTION 10 — QUALITY REQUIREMENTS
+
+10.1  Standards. All Goods shall conform to: (a) the Specifications set forth in Exhibit B; (b) all applicable ISO standards (including ISO 9001:2015); and (c) all applicable laws and regulations.
+10.2  Quality Management System. Supplier shall maintain a quality management system certified to ISO 9001:2015 or equivalent throughout the term of this Agreement.
+10.3  Statistical Process Control. For high-volume components (annual volume > 10,000 units), Supplier shall implement statistical process control measures and provide monthly Cpk reports to Buyer.
+10.4  Non-Conforming Goods. Supplier shall immediately notify Buyer upon discovery of any non-conformance in Goods already shipped, including the quantity shipped, the extent of non-conformance, and the corrective action taken or planned.
+10.5  Traceability. Supplier shall maintain full batch/lot traceability for all Goods for a minimum of five (5) years from the date of shipment.
+
+SECTION 11 — INSPECTION RIGHTS
+
+11.1  Incoming Inspection. Buyer shall have the right to inspect all Goods within fifteen (15) business days of receipt.
+11.2  On-Site Audits. Buyer may, upon ten (10) business days notice, audit Supplier's manufacturing facilities and quality records up to two (2) times per calendar year.
+11.3  Source Inspection. For Goods valued in excess of USD 50,000 per Purchase Order, Buyer reserves the right to conduct source inspection prior to shipment.
+
+SECTION 12 — NON-CONFORMING GOODS
+
+12.1  Rejection. Buyer may reject Goods that do not conform to the Specifications within fifteen (15) business days of inspection.
+12.2  Replacement. Upon receipt of notice of rejection, Supplier shall, at Buyer's election: (a) replace non-conforming Goods within thirty (30) days; or (b) issue a full credit note.
+12.3  Costs. All costs associated with the return, replacement, or disposal of non-conforming Goods shall be borne by Supplier.
+
+SECTION 14 — LIMITATION OF LIABILITY
+
+14.1  Exclusion of Consequential Damages. IN NO EVENT SHALL EITHER PARTY BE LIABLE TO THE OTHER FOR ANY INDIRECT, INCIDENTAL, SPECIAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR RELATED TO THIS AGREEMENT, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+14.2  Cap on Liability. EACH PARTY'S TOTAL CUMULATIVE LIABILITY ARISING OUT OF OR RELATED TO THIS AGREEMENT SHALL NOT EXCEED THE TOTAL AMOUNTS PAID OR PAYABLE UNDER THIS AGREEMENT IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM.
+14.3  Exceptions. The limitations in Sections 14.1 and 14.2 shall not apply to: (a) breaches of confidentiality; (b) intellectual property infringement; (c) gross negligence or wilful misconduct; or (d) any claims for personal injury or death.
+
+SECTION 16 — TERMINATION
+
+16.1  Termination for Convenience. Either party may terminate this Agreement at any time upon ninety (90) days written notice to the other party.
+16.2  Termination for Cause. Either party may terminate this Agreement immediately upon written notice if the other party: (a) commits a material breach and fails to cure such breach within thirty (30) days of written notice; (b) becomes insolvent, makes an assignment for the benefit of creditors, or is subject to bankruptcy proceedings; or (c) engages in fraudulent, corrupt, or illegal activity.
+16.3  Effect of Termination. Upon termination: (a) all outstanding Purchase Orders shall be cancelled, subject to payment for Goods already shipped; (b) each party shall return or destroy the other's Confidential Information; and (c) all licence rights granted hereunder shall terminate immediately.
+
+SECTION 18 — FORCE MAJEURE
+
+18.1  Neither party shall be liable for any failure or delay in performance caused by a Force Majeure Event. For the purposes of this Agreement, a "Force Majeure Event" includes: acts of God, war, terrorism, fire, flood, earthquake, natural disaster, epidemic, pandemic, public health emergency declared by the World Health Organization (WHO) or a national government, governmental sanctions or trade embargoes, quarantine restrictions, and actions of public authorities.
+
+18.2  Pandemic-Specific Provisions. In the event of a pandemic or public health emergency, the Supplier shall: (a) activate its documented pandemic response plan within forty-eight (48) hours of a WHO declaration; (b) designate an alternate supply chain route; and (c) provide the Buyer with weekly status updates. Pricing may be renegotiated if raw material costs increase by more than fifteen percent (15%) due to pandemic-related supply disruptions.
+
+18.3  The affected party shall provide written notice within five (5) business days of the onset of a Force Majeure Event. Failure to provide timely notice shall result in forfeiture of Force Majeure protections for delays preceding the notice.
+
+18.4  No Force Majeure Event shall excuse payment obligations for goods already delivered.
+
+SECTION 20 — GOVERNING LAW AND DISPUTE RESOLUTION
+
+20.1  Governing Law. This Agreement shall be governed by and construed in accordance with the laws of Germany, without regard to its conflict-of-laws principles.
+20.2  Negotiation. The parties shall first attempt to resolve any dispute through good-faith negotiation between senior representatives within thirty (30) days of written notice of a dispute.
+20.3  Arbitration. If negotiation fails, disputes shall be finally resolved by binding arbitration under the rules of the International Chamber of Commerce (ICC). The arbitration shall take place in Geneva, Switzerland, and shall be conducted in the English language.
+20.4  Injunctive Relief. Notwithstanding Section 20.3, either party may seek injunctive or equitable relief from a court of competent jurisdiction to prevent irreparable harm.
+20.5  Class Action Waiver. Each party waives any right to participate in a class action or collective proceeding related to this Agreement.
+
+EXHIBIT A — PRODUCT SCHEDULE
+See attached Purchase Order schedule, updated quarterly.
+
+EXHIBIT B — TECHNICAL SPECIFICATIONS
+See Supplier Quality Manual v12.0, incorporated herein by reference.
+
+IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first written above.
+
+ADVENTURE WORKS CYCLES, INC.
+By: ______________________________
+Name: Chief Procurement Officer
+
+TQ-SUB COMPONENTS GMBH
+By: ______________________________
+Name: Authorised Signatory
+Date: 2025-04-01

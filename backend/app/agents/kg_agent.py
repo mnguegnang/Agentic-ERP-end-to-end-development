@@ -117,7 +117,12 @@ async def _traverse(
 
 async def kg_agent_node(state: AgentState) -> AgentState:
     """Think-on-Graph: entity extract → relation select → traverse → self-correct."""
-    query: str = state.get("messages", [{}])[-1].get("content", "") if state.get("messages") else ""  # type: ignore[union-attr]
+    _msgs = state.get("messages") or []
+    _last = _msgs[-1] if _msgs else None
+    query: str = (
+        _last.content if hasattr(_last, "content")  # LangChain message object
+        else (_last.get("content", "") if isinstance(_last, dict) else "")
+    ) if _last else ""
 
     # Step 1: entity extraction
     extraction = await _extract_entities(query)
