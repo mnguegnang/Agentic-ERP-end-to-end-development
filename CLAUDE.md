@@ -165,3 +165,20 @@ Required secrets: `AZURE_CREDENTIALS`, `ACR_NAME`, `DEPLOY_REPO_PAT`.
 ## Fine-tuning
 
 Scripts under `fine_tune/` run on Lightning AI L4 (not locally). Flow: LangSmith trace curation → `prepare_dataset.py` → `train_dpo.py` (DPO + QLoRA, LoRA r=16 alpha=32, beta=0.1) → `eval_tool_accuracy.py`. Not part of the normal dev loop.
+
+
+# Project Context when working on web (claude.ai/code)
+## Repo Structure
+This project depends on two external repos:
+- **Agents repo**: `../agents-repo/` — contains custom subagent .md files
+- **Prompts repo**: `../prompts-repo/` — contains task-specific prompts invoked by agents
+
+## Custom Agents
+Agents are located in `.claude/agents/` (symlinked or copied from the agents repo).
+Always check the agents repo before implementing any fix — there may be a specialized
+agent (e.g. code-review-improve, ai-research-scientist) that should handle the task.
+
+## Workflow
+1. First diagnose the CI failure 
+2. Identify which agent is appropriate for the fix
+3. Invoke that agent explicitly using @agent-name
