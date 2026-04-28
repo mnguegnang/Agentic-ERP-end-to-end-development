@@ -38,7 +38,7 @@ const ChatPanel: React.FC = () => {
           },
         ])
       } catch {
-        setMessages((prev) => [...prev, { role: 'assistant', content: lastMessage }])
+        setMessages((prev) => [...prev, { role: 'assistant', content: lastMessage ?? '' }])
       }
     }
   }, [lastMessage])
@@ -117,7 +117,6 @@ const ChatPanel: React.FC = () => {
 
             {m.content}
 
-            {/* Approval action panel — shown only when pending */}
             {m.humanApprovalRequired && m.decisionId && m.approvalStatus === 'pending' && (
               <div className="mt-3 flex gap-2">
                 <button
@@ -138,7 +137,6 @@ const ChatPanel: React.FC = () => {
               </div>
             )}
 
-            {/* Outcome badge — shown after manager acts */}
             {m.approvalStatus === 'approved' && (
               <div className="mt-2 rounded bg-green-700 text-white px-2 py-1 text-xs font-semibold">
                 ✅ Approved by supply-chain manager — execution authorised.
