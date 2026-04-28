@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useWebSocket } from '../hooks/useWebSocket'
 
-// TODO Stage 3: replace stub messages with AgentState-driven streaming tokens
-
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  humanApprovalRequired?: boolean
+  decisionId?: string
+  approvalStatus?: 'pending' | 'approved' | 'rejected'
 }
+
+const API_BASE = `http://${window.location.hostname}:8000`
 
 const ChatPanel: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([])
@@ -19,7 +22,24 @@ const ChatPanel: React.FC = () => {
 
   useEffect(() => {
     if (lastMessage) {
-      setMessages((prev) => [...prev, { role: 'assistant', content: lastMessage }])
+      try {
+        const parsed = JSON.parse(lastMessage)
+        const text = parsed.content ?? lastMessage
+        const needsApproval = parsed.human_approval_required === true
+        const decisionId = parsed.decision_id ?? undefined
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: text,
+            humanApprovalRequired: needsApproval,
+            decisionId,
+            approvalStatus: needsApproval ? 'pending' : undefined,
+          },
+        ])
+      } catch {
+        setMessages((prev) => [...prev, { role: 'assistant', content: lastMessage ?? '' }])
+      }
     }
   }, [lastMessage])
 
@@ -31,7 +51,7 @@ const ChatPanel: React.FC = () => {
     const text = input.trim()
     if (!text || readyState !== WebSocket.OPEN) return
     setMessages((prev) => [...prev, { role: 'user', content: text }])
-    sendMessage(text)
+    sendMessage(JSON.stringify({ role: 'user', content: text }))
     setInput('')
   }
 
@@ -39,6 +59,34 @@ const ChatPanel: React.FC = () => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
+    }
+  }
+
+  const handleApproval = async (msgIndex: number, approved: boolean) => {
+    const msg = messages[msgIndex]
+    if (!msg.decisionId) return
+
+    try {
+      const res = await fetch(`${API_BASE}/api/approve/${msg.decisionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          approved,
+          approved_by: 'supply-chain-manager',
+          reason: approved ? 'Reviewed and approved' : 'Rejected by manager',
+        }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const record = await res.json()
+      const newStatus: 'approved' | 'rejected' = record.status
+
+      setMessages((prev) =>
+        prev.map((m, i) =>
+          i === msgIndex ? { ...m, approvalStatus: newStatus } : m,
+        ),
+      )
+    } catch (err) {
+      console.error('Approval request failed:', err)
     }
   }
 
@@ -58,12 +106,47 @@ const ChatPanel: React.FC = () => {
           <div
             key={i}
             className={`rounded-lg px-3 py-2 text-sm max-w-prose ${
-              m.role === 'user'
-                ? 'bg-blue-700 ml-auto'
-                : 'bg-gray-700'
+              m.role === 'user' ? 'bg-blue-700 ml-auto' : 'bg-gray-700'
             }`}
           >
+            {m.humanApprovalRequired && (
+              <div className="mb-2 rounded bg-yellow-500 text-black font-bold px-2 py-1 text-xs">
+                ⚠️ HUMAN APPROVAL REQUIRED — cost exceeds $10,000 threshold
+              </div>
+            )}
+
             {m.content}
+
+            {m.humanApprovalRequired && m.decisionId && m.approvalStatus === 'pending' && (
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => handleApproval(i, true)}
+                  className="rounded bg-green-600 hover:bg-green-500 px-3 py-1 text-white text-xs font-semibold"
+                >
+                  ✅ Approve
+                </button>
+                <button
+                  onClick={() => handleApproval(i, false)}
+                  className="rounded bg-red-600 hover:bg-red-500 px-3 py-1 text-white text-xs font-semibold"
+                >
+                  ❌ Reject
+                </button>
+                <span className="text-xs text-gray-400 self-center">
+                  ID: {m.decisionId.slice(0, 8)}…
+                </span>
+              </div>
+            )}
+
+            {m.approvalStatus === 'approved' && (
+              <div className="mt-2 rounded bg-green-700 text-white px-2 py-1 text-xs font-semibold">
+                ✅ Approved by supply-chain manager — execution authorised.
+              </div>
+            )}
+            {m.approvalStatus === 'rejected' && (
+              <div className="mt-2 rounded bg-red-700 text-white px-2 py-1 text-xs font-semibold">
+                ❌ Rejected by supply-chain manager — execution blocked.
+              </div>
+            )}
           </div>
         ))}
         <div ref={bottomRef} />
