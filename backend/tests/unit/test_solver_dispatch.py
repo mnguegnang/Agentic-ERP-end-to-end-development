@@ -41,6 +41,14 @@ def _make_state(intent: str) -> AgentState:
     )
 
 
+def _patch_dispatch_settings() -> MagicMock:
+    """Return a mock settings object with values safe for all dispatch tests."""
+    mock_settings = MagicMock()
+    mock_settings.human_approval_cost_threshold = 10_000.0
+    mock_settings.redis_url = "redis://localhost:6379"
+    return mock_settings
+
+
 # ---------------------------------------------------------------------------
 # Non-mcnf solver dispatches — stubs called with empty params
 # ---------------------------------------------------------------------------
@@ -66,7 +74,8 @@ async def test_solver_dispatch_calls_correct_solver(
     mock_solver = MagicMock(return_value={"status": "OPTIMAL", "objective": 100.0})
     state = _make_state(intent)
 
-    with patch(solver_module_path, mock_solver):
+    with patch("app.agents.orchestrator.get_settings", return_value=_patch_dispatch_settings()), \
+            patch(solver_module_path, mock_solver):
         result = await solver_dispatch_node(state)
 
     mock_solver.assert_called_once()
@@ -78,7 +87,8 @@ async def test_solver_dispatch_calls_correct_solver(
 async def test_solver_dispatch_kg_query_no_solver() -> None:
     """kg_query intent should not call any solver."""
     state = _make_state("kg_query")
-    result = await solver_dispatch_node(state)
+    with patch("app.agents.orchestrator.get_settings", return_value=_patch_dispatch_settings()):
+        result = await solver_dispatch_node(state)
     assert result["solver_output"]["status"] == "no_solver_needed"
     assert result["solver_output"]["intent"] == "kg_query"
 
@@ -96,10 +106,11 @@ async def test_solver_dispatch_mcnf_param_extraction_called() -> None:
     mock_solver = MagicMock(return_value={"status": "OPTIMAL", "total_cost": 250.0})
     state = _make_state("mcnf_solve")
 
-    with patch(
-        "app.agents.orchestrator._extract_mcnf_params",
-        AsyncMock(return_value=mock_params),
-    ), patch("app.agents.orchestrator.solve_mcnf", mock_solver):
+    with patch("app.agents.orchestrator.get_settings", return_value=_patch_dispatch_settings()), \
+            patch(
+                "app.agents.orchestrator._extract_mcnf_params",
+                AsyncMock(return_value=mock_params),
+            ), patch("app.agents.orchestrator.solve_mcnf", mock_solver):
         result = await solver_dispatch_node(state)
 
     mock_solver.assert_called_once()
@@ -111,10 +122,11 @@ async def test_solver_dispatch_mcnf_param_extraction_failure() -> None:
     """If _extract_mcnf_params returns None, solver_output has param_extraction_failed."""
     state = _make_state("mcnf_solve")
 
-    with patch(
-        "app.agents.orchestrator._extract_mcnf_params",
-        AsyncMock(return_value=None),
-    ):
+    with patch("app.agents.orchestrator.get_settings", return_value=_patch_dispatch_settings()), \
+            patch(
+                "app.agents.orchestrator._extract_mcnf_params",
+                AsyncMock(return_value=None),
+            ):
         result = await solver_dispatch_node(state)
 
     assert result["solver_output"]["status"] == "param_extraction_failed"
@@ -126,7 +138,8 @@ async def test_solver_dispatch_solver_exception_caught() -> None:
     state = _make_state("bullwhip_analyze")
     mock_solver = MagicMock(side_effect=RuntimeError("OR-Tools crash"))
 
-    with patch("app.agents.orchestrator.analyze_bullwhip", mock_solver):
+    with patch("app.agents.orchestrator.get_settings", return_value=_patch_dispatch_settings()), \
+            patch("app.agents.orchestrator.analyze_bullwhip", mock_solver):
         result = await solver_dispatch_node(state)
 
     assert result["solver_output"]["status"] == "error"
