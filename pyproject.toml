@@ -95,8 +95,11 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Seed scripts contain tabular data and contract template strings — E501 is acceptable
 "backend/scripts/*" = ["E501"]
-# Test files: F401 auto-fix would remove stub imports needed for future stages
-"backend/tests/*" = ["F401"]
+# Test files: F401 auto-fix would remove stub imports needed for future stages;
+# E501 is acceptable in test data (long LabelledQuery / parametrize strings)
+"backend/tests/*" = ["F401", "E501"]
+# Fine-tune scripts: long training configuration strings
+"fine_tune/*" = ["E501"]
 
 # ------------------------------------------------------------------------------
 # mypy

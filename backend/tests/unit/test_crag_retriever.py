@@ -12,10 +12,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from app.rag.evaluator import AMBIGUOUS, CORRECT, INCORRECT, evaluate_relevance
 from app.rag.retriever import CRAGResult, reciprocal_rank_fusion, retrieve_and_evaluate
-
 
 # ---------------------------------------------------------------------------
 # reciprocal_rank_fusion — pure function tests
@@ -78,12 +76,16 @@ async def test_retrieve_and_evaluate_correct_evaluation() -> None:
     """When retrieval returns docs and evaluator says 'correct', evaluation propagates."""
     docs = [_doc("1", "Supplier A provides high-quality components under contract.")]
 
-    with patch("app.rag.retriever.get_settings") as mock_s, \
-         patch("app.rag.retriever._get_embedder") as mock_emb, \
-         patch("app.rag.retriever._pgvector_search", AsyncMock(return_value=docs)), \
-         patch("app.rag.retriever._load_bm25_corpus", AsyncMock(return_value=([], None))), \
-         patch("app.rag.retriever.rerank", return_value=docs), \
-         patch("app.rag.retriever.evaluate_relevance", AsyncMock(return_value=CORRECT)):
+    with (
+        patch("app.rag.retriever.get_settings") as mock_s,
+        patch("app.rag.retriever._get_embedder") as mock_emb,
+        patch("app.rag.retriever._pgvector_search", AsyncMock(return_value=docs)),
+        patch(
+            "app.rag.retriever._load_bm25_corpus", AsyncMock(return_value=([], None))
+        ),
+        patch("app.rag.retriever.rerank", return_value=docs),
+        patch("app.rag.retriever.evaluate_relevance", AsyncMock(return_value=CORRECT)),
+    ):
         _patch_settings_rr(mock_s)
         mock_emb.return_value.encode = MagicMock(
             return_value=MagicMock(tolist=MagicMock(return_value=[0.0] * 1024))
@@ -98,11 +100,15 @@ async def test_retrieve_and_evaluate_correct_evaluation() -> None:
 @pytest.mark.asyncio
 async def test_retrieve_and_evaluate_no_results_returns_incorrect() -> None:
     """Empty retrieval pipeline returns incorrect without calling evaluator."""
-    with patch("app.rag.retriever.get_settings") as mock_s, \
-         patch("app.rag.retriever._get_embedder") as mock_emb, \
-         patch("app.rag.retriever._pgvector_search", AsyncMock(return_value=[])), \
-         patch("app.rag.retriever._load_bm25_corpus", AsyncMock(return_value=([], None))), \
-         patch("app.rag.retriever.rerank", return_value=[]):
+    with (
+        patch("app.rag.retriever.get_settings") as mock_s,
+        patch("app.rag.retriever._get_embedder") as mock_emb,
+        patch("app.rag.retriever._pgvector_search", AsyncMock(return_value=[])),
+        patch(
+            "app.rag.retriever._load_bm25_corpus", AsyncMock(return_value=([], None))
+        ),
+        patch("app.rag.retriever.rerank", return_value=[]),
+    ):
         _patch_settings_rr(mock_s)
         mock_emb.return_value.encode = MagicMock(
             return_value=MagicMock(tolist=MagicMock(return_value=[0.0] * 1024))
@@ -118,12 +124,12 @@ async def test_retrieve_and_evaluate_no_results_returns_incorrect() -> None:
 @pytest.mark.asyncio
 async def test_retrieve_and_evaluate_embedding_failure() -> None:
     """Embedder exception returns CRAGResult with embedding_error fallback."""
-    with patch("app.rag.retriever.get_settings") as mock_s, \
-         patch("app.rag.retriever._get_embedder") as mock_emb:
+    with (
+        patch("app.rag.retriever.get_settings") as mock_s,
+        patch("app.rag.retriever._get_embedder") as mock_emb,
+    ):
         _patch_settings_rr(mock_s)
-        mock_emb.return_value.encode = MagicMock(
-            side_effect=RuntimeError("CUDA OOM")
-        )
+        mock_emb.return_value.encode = MagicMock(side_effect=RuntimeError("CUDA OOM"))
 
         result = await retrieve_and_evaluate("test query")
 
@@ -163,8 +169,10 @@ async def test_evaluate_relevance_llm_label_propagated(label: str) -> None:
     from app.rag.evaluator import _RelevanceLabel  # noqa: PLC0415
 
     mock_result = _RelevanceLabel(label=label, reasoning="test")
-    with patch("app.rag.evaluator.get_settings") as mock_s, \
-         patch("app.rag.evaluator.ChatOpenAI") as mock_llm_cls:
+    with (
+        patch("app.rag.evaluator.get_settings") as mock_s,
+        patch("app.rag.evaluator.ChatOpenAI") as mock_llm_cls,
+    ):
         _patch_eval_settings(mock_s)
         mock_llm = MagicMock()
         mock_structured = MagicMock()
@@ -172,15 +180,19 @@ async def test_evaluate_relevance_llm_label_propagated(label: str) -> None:
         mock_llm.with_structured_output.return_value = mock_structured
         mock_llm_cls.return_value = mock_llm
 
-        result = await evaluate_relevance("query", top_doc={"chunk_text": "relevant text"})
+        result = await evaluate_relevance(
+            "query", top_doc={"chunk_text": "relevant text"}
+        )
 
     assert result == label
 
 
 @pytest.mark.asyncio
 async def test_evaluate_relevance_llm_failure_returns_ambiguous() -> None:
-    with patch("app.rag.evaluator.get_settings") as mock_s, \
-         patch("app.rag.evaluator.ChatOpenAI") as mock_llm_cls:
+    with (
+        patch("app.rag.evaluator.get_settings") as mock_s,
+        patch("app.rag.evaluator.ChatOpenAI") as mock_llm_cls,
+    ):
         _patch_eval_settings(mock_s)
         mock_llm = MagicMock()
         mock_structured = MagicMock()

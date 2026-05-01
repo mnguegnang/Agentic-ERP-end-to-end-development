@@ -18,7 +18,6 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from app.agents.orchestrator import run_orchestrator
 from app.api.schemas import (
     Arc,
@@ -163,7 +162,12 @@ def _mcnf_params(cost_per_unit: float = 5.0) -> SolveMcnfInput:
         nodes=["factory_a", "store_c"],
         arcs=[
             Arc(
-                **{"from": "factory_a", "to": "store_c", "capacity": 100.0, "cost_per_unit": cost_per_unit}
+                **{
+                    "from": "factory_a",
+                    "to": "store_c",
+                    "capacity": 100.0,
+                    "cost_per_unit": cost_per_unit,
+                }
             )
         ],
         commodities=[Commodity(source="factory_a", sink="store_c", demand=50.0)],
@@ -196,13 +200,19 @@ def _patch_all(
         ),
         patch(
             "app.kg.client.execute_read",
-            new=AsyncMock(return_value=(kg_subgraph if kg_subgraph is not None else _mock_kg_subgraph())),
+            new=AsyncMock(
+                return_value=(
+                    kg_subgraph if kg_subgraph is not None else _mock_kg_subgraph()
+                )
+            ),
         ),
         # Patch at the import site in contract_agent (not at retriever module level)
         patch(
             "app.agents.contract_agent.retrieve_and_evaluate",
             new=AsyncMock(
-                return_value=(crag_result if crag_result is not None else _mock_crag_result())
+                return_value=(
+                    crag_result if crag_result is not None else _mock_crag_result()
+                )
             ),
         ),
         patch("app.agents.contract_agent.get_settings", return_value=s),
@@ -262,7 +272,9 @@ class TestKgQueryPath:
             result = await run_orchestrator("Which warehouses store Component X?")
 
         # solver_output should record no_solver_needed for kg_query intent
-        assert result.solver_result is not None or result.solver_result is None  # present in state
+        assert (
+            result.solver_result is not None or result.solver_result is None
+        )  # present in state
         assert result.intent == "kg_query"
 
     @pytest.mark.asyncio
@@ -364,7 +376,11 @@ class TestMcnfSolveLowCostPath:
         assert result.intent == "mcnf_solve"
         assert result.human_approval_required is False
         assert result.solver_result is not None
-        assert result.solver_result.get("status") in ("OPTIMAL", "NOT_SOLVED", "param_extraction_failed") or True
+        assert (
+            result.solver_result.get("status")
+            in ("OPTIMAL", "NOT_SOLVED", "param_extraction_failed")
+            or True
+        )
 
     @pytest.mark.asyncio
     async def test_mcnf_param_extraction_failure_graceful(self) -> None:
@@ -433,7 +449,9 @@ class TestMcnfSolveHighCostPath:
             "final_response": None,
             "error": None,
         }
-        with patch("app.agents.orchestrator.get_settings", return_value=_mock_settings()):
+        with patch(
+            "app.agents.orchestrator.get_settings", return_value=_mock_settings()
+        ):
             result = await human_approval_gate(state)  # type: ignore[arg-type]
 
         # flag should remain True since it was pre-set

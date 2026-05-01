@@ -56,5 +56,3 @@ async def websocket_chat(websocket: WebSocket) -> None:
 
     except WebSocketDisconnect:
         logger.debug("Client disconnected from /ws/chat")
-
-

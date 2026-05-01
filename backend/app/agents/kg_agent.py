@@ -56,7 +56,7 @@ def _make_llm() -> ChatOpenAI:
         base_url=s.llm_base_url,
         api_key=s.github_token,  # type: ignore[arg-type]
         temperature=0.0,
-        max_tokens=512,
+        max_tokens=512,  # type: ignore[call-arg]
     )
 
 
@@ -65,7 +65,7 @@ async def _extract_entities(query: str) -> EntityExtractionResult:
     try:
         llm = _make_llm()
         structured = llm.with_structured_output(EntityExtractionResult)
-        result: EntityExtractionResult = await structured.ainvoke(
+        result: EntityExtractionResult = await structured.ainvoke(  # type: ignore[assignment]
             [
                 SystemMessage(_ENTITY_SYSTEM),
                 HumanMessage(f"Query: {query}"),
@@ -82,7 +82,7 @@ async def _select_relations(query: str, entities: list[str]) -> RelationSelectio
     try:
         llm = _make_llm()
         structured = llm.with_structured_output(RelationSelectionResult)
-        result: RelationSelectionResult = await structured.ainvoke(
+        result: RelationSelectionResult = await structured.ainvoke(  # type: ignore[assignment]
             [
                 SystemMessage(_RELATION_SYSTEM),
                 HumanMessage(f"Query: {query}\nEntities: {', '.join(entities)}"),
@@ -120,9 +120,14 @@ async def kg_agent_node(state: AgentState) -> AgentState:
     _msgs = state.get("messages") or []
     _last = _msgs[-1] if _msgs else None
     query: str = (
-        _last.content if hasattr(_last, "content")  # LangChain message object
-        else (_last.get("content", "") if isinstance(_last, dict) else "")
-    ) if _last else ""
+        (
+            _last.content
+            if hasattr(_last, "content")  # LangChain message object
+            else (_last.get("content", "") if isinstance(_last, dict) else "")
+        )
+        if _last
+        else ""
+    )
 
     # Step 1: entity extraction
     extraction = await _extract_entities(query)

@@ -12,11 +12,9 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from app.main import app
 from langchain_core.messages import AIMessage
 from starlette.testclient import TestClient
-
-from app.main import app
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -138,8 +136,10 @@ class TestBaselineChainDirect:
     @pytest.mark.asyncio
     async def test_no_tool_call_returns_text_response(self) -> None:
         """LLM answers without calling a tool → WsResponse with content set."""
-        with patch("app.chains.baseline_chain.get_settings") as mock_settings_fn, \
-             patch("app.chains.baseline_chain.ChatOpenAI") as mock_llm_cls:
+        with (
+            patch("app.chains.baseline_chain.get_settings") as mock_settings_fn,
+            patch("app.chains.baseline_chain.ChatOpenAI") as mock_llm_cls,
+        ):
             _patch_settings(mock_settings_fn)
             mock_instance = MagicMock()
             mock_llm_with_tools = MagicMock()
@@ -176,8 +176,10 @@ class TestBaselineChainDirect:
             "commodities": [{"source": "A", "sink": "C", "demand": 10.0}],
         }
 
-        with patch("app.chains.baseline_chain.get_settings") as mock_settings_fn, \
-             patch("app.chains.baseline_chain.ChatOpenAI") as mock_llm_cls:
+        with (
+            patch("app.chains.baseline_chain.get_settings") as mock_settings_fn,
+            patch("app.chains.baseline_chain.ChatOpenAI") as mock_llm_cls,
+        ):
             _patch_settings(mock_settings_fn)
             mock_instance = MagicMock()
             mock_llm_with_tools = MagicMock()
@@ -200,15 +202,17 @@ class TestBaselineChainDirect:
         assert result.tool_used == "solve_mcnf"
         assert result.solver_result is not None
         assert result.solver_result["status"] == "OPTIMAL"
-        assert abs(result.solver_result["total_cost"] - 30.0) < 1e-3, (
-            f"Expected total_cost≈30.0, got {result.solver_result['total_cost']}"
-        )
+        assert (
+            abs(result.solver_result["total_cost"] - 30.0) < 1e-3
+        ), f"Expected total_cost≈30.0, got {result.solver_result['total_cost']}"
 
     @pytest.mark.asyncio
     async def test_unknown_tool_name_does_not_crash(self) -> None:
         """If the LLM requests a non-existent tool, the chain handles it gracefully."""
-        with patch("app.chains.baseline_chain.get_settings") as mock_settings_fn, \
-             patch("app.chains.baseline_chain.ChatOpenAI") as mock_llm_cls:
+        with (
+            patch("app.chains.baseline_chain.get_settings") as mock_settings_fn,
+            patch("app.chains.baseline_chain.ChatOpenAI") as mock_llm_cls,
+        ):
             _patch_settings(mock_settings_fn)
             mock_instance = MagicMock()
             mock_llm_with_tools = MagicMock()

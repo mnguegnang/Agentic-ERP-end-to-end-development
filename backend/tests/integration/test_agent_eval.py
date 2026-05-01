@@ -21,9 +21,8 @@ from typing import NamedTuple
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-from app.agents.orchestrator import classify_intent, route_by_intent
 from app.agents.graph_state import AgentState
+from app.agents.orchestrator import classify_intent, route_by_intent
 from app.api.schemas import IntentClassification
 
 # ---------------------------------------------------------------------------
@@ -41,127 +40,620 @@ class LabelledQuery(NamedTuple):
 
 LABELLED_DATASET: list[LabelledQuery] = [
     # ── kg_query (10) ──
-    LabelledQuery("Show me the supply network for TQ-Electronics", "kg_query", "kg_query", "visibility"),
-    LabelledQuery("Which suppliers provide bearings for product BRG-001?", "kg_query", "kg_query", "visibility"),
-    LabelledQuery("Traverse supply graph from Tier 1 to Tier 3 for component C-007", "kg_query", "kg_query", "visibility"),
-    LabelledQuery("List all distribution centers connected to factory FAB-002", "kg_query", "kg_query", "visibility"),
-    LabelledQuery("What products depend on components from SHA-Electronics?", "kg_query", "kg_query", "visibility"),
-    LabelledQuery("Show supplier relationships for Tier 2 vendors", "kg_query", "kg_query", "visibility"),
-    LabelledQuery("Find all nodes connected to distribution center DC-BERLIN", "kg_query", "kg_query", "visibility"),
-    LabelledQuery("Map the supply chain from raw material to finished product P-042", "kg_query", "kg_query", "visibility"),
-    LabelledQuery("Which work centers process component C-015?", "kg_query", "kg_query", "visibility"),
-    LabelledQuery("Show me the full graph subnetwork for suppliers in Germany", "kg_query", "kg_query", "visibility"),
-
+    LabelledQuery(
+        "Show me the supply network for TQ-Electronics",
+        "kg_query",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Which suppliers provide bearings for product BRG-001?",
+        "kg_query",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Traverse supply graph from Tier 1 to Tier 3 for component C-007",
+        "kg_query",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "List all distribution centers connected to factory FAB-002",
+        "kg_query",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "What products depend on components from SHA-Electronics?",
+        "kg_query",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Show supplier relationships for Tier 2 vendors",
+        "kg_query",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Find all nodes connected to distribution center DC-BERLIN",
+        "kg_query",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Map the supply chain from raw material to finished product P-042",
+        "kg_query",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Which work centers process component C-015?",
+        "kg_query",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Show me the full graph subnetwork for suppliers in Germany",
+        "kg_query",
+        "kg_query",
+        "visibility",
+    ),
     # ── mcnf_solve (10) ──
-    LabelledQuery("Route 500 units from warehouse A to DC Berlin with min cost", "mcnf_solve", "or_solve", "visibility"),
-    LabelledQuery("Optimize logistics flow from factory to 3 distribution centers", "mcnf_solve", "or_solve", "visibility"),
-    LabelledQuery("Find minimum cost routing for 1000 bearings from TQ-Tokyo to Paris DC", "mcnf_solve", "or_solve", "visibility"),
-    LabelledQuery("Solve the minimum cost network flow for our European distribution network", "mcnf_solve", "or_solve", "visibility"),
-    LabelledQuery("Re-route 2000 units from backup suppliers to meet Berlin demand", "mcnf_solve", "or_solve", "visibility"),
-    LabelledQuery("What is the optimal shipping path from node A to node D with capacity 5000?", "mcnf_solve", "or_solve", "visibility"),
-    LabelledQuery("Minimize transportation cost across the supply network", "mcnf_solve", "or_solve", "visibility"),
-    LabelledQuery("MCNF: nodes [W1,W2,DC1,DC2], arc costs and capacities specified, solve", "mcnf_solve", "or_solve", "visibility"),
-    LabelledQuery("Network flow optimization: ship 800 units at $12/unit from factory to warehouse", "mcnf_solve", "or_solve", "visibility"),
-    LabelledQuery("Compute least-cost flow plan for emergency restocking of DC-TOKYO", "mcnf_solve", "or_solve", "visibility"),
-
+    LabelledQuery(
+        "Route 500 units from warehouse A to DC Berlin with min cost",
+        "mcnf_solve",
+        "or_solve",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Optimize logistics flow from factory to 3 distribution centers",
+        "mcnf_solve",
+        "or_solve",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Find minimum cost routing for 1000 bearings from TQ-Tokyo to Paris DC",
+        "mcnf_solve",
+        "or_solve",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Solve the minimum cost network flow for our European distribution network",
+        "mcnf_solve",
+        "or_solve",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Re-route 2000 units from backup suppliers to meet Berlin demand",
+        "mcnf_solve",
+        "or_solve",
+        "visibility",
+    ),
+    LabelledQuery(
+        "What is the optimal shipping path from node A to node D with capacity 5000?",
+        "mcnf_solve",
+        "or_solve",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Minimize transportation cost across the supply network",
+        "mcnf_solve",
+        "or_solve",
+        "visibility",
+    ),
+    LabelledQuery(
+        "MCNF: nodes [W1,W2,DC1,DC2], arc costs and capacities specified, solve",
+        "mcnf_solve",
+        "or_solve",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Network flow optimization: ship 800 units at $12/unit from factory to warehouse",
+        "mcnf_solve",
+        "or_solve",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Compute least-cost flow plan for emergency restocking of DC-TOKYO",
+        "mcnf_solve",
+        "or_solve",
+        "visibility",
+    ),
     # ── disruption_resource (10) ──
-    LabelledQuery("TQ-Electronics is disrupted — find alternative suppliers for bearings", "disruption_resource", "kg_query", "visibility"),
-    LabelledQuery("Earthquake hit SHA-Electronics factory. What components are affected?", "disruption_resource", "kg_query", "visibility"),
-    LabelledQuery("Supplier HAN-Metals is bankrupt. Reallocate their orders", "disruption_resource", "kg_query", "visibility"),
-    LabelledQuery("Port congestion at Rotterdam is blocking shipments. Identify workarounds", "disruption_resource", "kg_query", "visibility"),
-    LabelledQuery("Flood disrupted Tier 2 supplier NOR-Parts. Which products are at risk?", "disruption_resource", "kg_query", "visibility"),
-    LabelledQuery("Critical component C-009 supply interrupted. Find backup sources", "disruption_resource", "kg_query", "visibility"),
-    LabelledQuery("Strike at LUC-Assemblies — reschedule affected work orders", "disruption_resource", "kg_query", "visibility"),
-    LabelledQuery("Tariffs imposed on imports from KOR-Tech suppliers — reroute supply", "disruption_resource", "kg_query", "visibility"),
-    LabelledQuery("Outbreak at FAB-002 factory reduced capacity by 40%. Adjust plans", "disruption_resource", "kg_query", "visibility"),
-    LabelledQuery("BRA-Components delivery delayed 3 weeks. Which products will be affected?", "disruption_resource", "kg_query", "visibility"),
-
+    LabelledQuery(
+        "TQ-Electronics is disrupted — find alternative suppliers for bearings",
+        "disruption_resource",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Earthquake hit SHA-Electronics factory. What components are affected?",
+        "disruption_resource",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Supplier HAN-Metals is bankrupt. Reallocate their orders",
+        "disruption_resource",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Port congestion at Rotterdam is blocking shipments. Identify workarounds",
+        "disruption_resource",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Flood disrupted Tier 2 supplier NOR-Parts. Which products are at risk?",
+        "disruption_resource",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Critical component C-009 supply interrupted. Find backup sources",
+        "disruption_resource",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Strike at LUC-Assemblies — reschedule affected work orders",
+        "disruption_resource",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Tariffs imposed on imports from KOR-Tech suppliers — reroute supply",
+        "disruption_resource",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Outbreak at FAB-002 factory reduced capacity by 40%. Adjust plans",
+        "disruption_resource",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "BRA-Components delivery delayed 3 weeks. Which products will be affected?",
+        "disruption_resource",
+        "kg_query",
+        "visibility",
+    ),
     # ── meio_optimize (10) ──
-    LabelledQuery("Optimize safety stock levels across our 4-stage supply chain", "meio_optimize", "or_solve", "inventory"),
-    LabelledQuery("Run MEIO GSM to minimize inventory holding costs at 95% service level", "meio_optimize", "or_solve", "inventory"),
-    LabelledQuery("Calculate optimal guaranteed service times for multi-echelon inventory", "meio_optimize", "or_solve", "inventory"),
-    LabelledQuery("What safety stock should stage 2 hold given lead time of 7 days and 98% SL?", "meio_optimize", "or_solve", "inventory"),
-    LabelledQuery("Solve for minimum inventory cost across all echelons", "meio_optimize", "or_solve", "inventory"),
-    LabelledQuery("MEIO optimization for 5 stages with holding costs and demand variability", "meio_optimize", "or_solve", "inventory"),
-    LabelledQuery("Find optimal service times to minimize total safety stock cost", "meio_optimize", "or_solve", "inventory"),
-    LabelledQuery("Multi-echelon inventory model: 3 stages, service level 97%, optimize", "meio_optimize", "or_solve", "inventory"),
-    LabelledQuery("Minimize inventory investment across the distribution network", "meio_optimize", "or_solve", "inventory"),
-    LabelledQuery("What is the Guaranteed Service Model recommendation for our DC network?", "meio_optimize", "or_solve", "inventory"),
-
+    LabelledQuery(
+        "Optimize safety stock levels across our 4-stage supply chain",
+        "meio_optimize",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Run MEIO GSM to minimize inventory holding costs at 95% service level",
+        "meio_optimize",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Calculate optimal guaranteed service times for multi-echelon inventory",
+        "meio_optimize",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "What safety stock should stage 2 hold given lead time of 7 days and 98% SL?",
+        "meio_optimize",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Solve for minimum inventory cost across all echelons",
+        "meio_optimize",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "MEIO optimization for 5 stages with holding costs and demand variability",
+        "meio_optimize",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Find optimal service times to minimize total safety stock cost",
+        "meio_optimize",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Multi-echelon inventory model: 3 stages, service level 97%, optimize",
+        "meio_optimize",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Minimize inventory investment across the distribution network",
+        "meio_optimize",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "What is the Guaranteed Service Model recommendation for our DC network?",
+        "meio_optimize",
+        "or_solve",
+        "inventory",
+    ),
     # ── bullwhip_analyze (10) ──
-    LabelledQuery("Analyze bullwhip effect in our demand signal over last 52 weeks", "bullwhip_analyze", "or_solve", "inventory"),
-    LabelledQuery("Calculate demand amplification ratios across our supply chain echelons", "bullwhip_analyze", "or_solve", "inventory"),
-    LabelledQuery("How severe is the bullwhip effect given our 4-week lead time?", "bullwhip_analyze", "or_solve", "inventory"),
-    LabelledQuery("Quantify variance amplification in orders vs. consumer demand", "bullwhip_analyze", "or_solve", "inventory"),
-    LabelledQuery("Bullwhip analysis: AR(1) process with rho=0.7 across 3 echelons", "bullwhip_analyze", "or_solve", "inventory"),
-    LabelledQuery("What is the spectral radius of our demand process?", "bullwhip_analyze", "or_solve", "inventory"),
-    LabelledQuery("Run bullwhip simulation for 52-period demand series", "bullwhip_analyze", "or_solve", "inventory"),
-    LabelledQuery("Is our order variance significantly higher than demand variance?", "bullwhip_analyze", "or_solve", "inventory"),
-    LabelledQuery("Forecast amplification ratio for our replenishment policy", "bullwhip_analyze", "or_solve", "inventory"),
-    LabelledQuery("Analyze demand signal distortion at the manufacturer echelon", "bullwhip_analyze", "or_solve", "inventory"),
-
+    LabelledQuery(
+        "Analyze bullwhip effect in our demand signal over last 52 weeks",
+        "bullwhip_analyze",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Calculate demand amplification ratios across our supply chain echelons",
+        "bullwhip_analyze",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "How severe is the bullwhip effect given our 4-week lead time?",
+        "bullwhip_analyze",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Quantify variance amplification in orders vs. consumer demand",
+        "bullwhip_analyze",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Bullwhip analysis: AR(1) process with rho=0.7 across 3 echelons",
+        "bullwhip_analyze",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "What is the spectral radius of our demand process?",
+        "bullwhip_analyze",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Run bullwhip simulation for 52-period demand series",
+        "bullwhip_analyze",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Is our order variance significantly higher than demand variance?",
+        "bullwhip_analyze",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Forecast amplification ratio for our replenishment policy",
+        "bullwhip_analyze",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Analyze demand signal distortion at the manufacturer echelon",
+        "bullwhip_analyze",
+        "or_solve",
+        "inventory",
+    ),
     # ── jsp_schedule (10) ──
-    LabelledQuery("Schedule 5 jobs across 3 machines to minimize makespan", "jsp_schedule", "or_solve", "inventory"),
-    LabelledQuery("Job shop scheduling for our manufacturing floor this week", "jsp_schedule", "or_solve", "inventory"),
-    LabelledQuery("Optimize production schedule: 8 jobs, 4 work centers, minimize completion time", "jsp_schedule", "or_solve", "inventory"),
-    LabelledQuery("JSP: Job 1 needs machine A then B, Job 2 needs B then A. Minimize makespan", "jsp_schedule", "or_solve", "inventory"),
-    LabelledQuery("Create optimal shop floor schedule for next 5 days", "jsp_schedule", "or_solve", "inventory"),
-    LabelledQuery("CP-SAT job scheduling with precedence constraints and machine capacity", "jsp_schedule", "or_solve", "inventory"),
-    LabelledQuery("What is the minimum makespan for our assembly line schedule?", "jsp_schedule", "or_solve", "inventory"),
-    LabelledQuery("Schedule work orders WO-101 to WO-115 on 6 production lines", "jsp_schedule", "or_solve", "inventory"),
-    LabelledQuery("Production planning: minimize idle time on machines M1-M4", "jsp_schedule", "or_solve", "inventory"),
-    LabelledQuery("Generate a Gantt-optimal schedule for the fabrication shop", "jsp_schedule", "or_solve", "inventory"),
-
+    LabelledQuery(
+        "Schedule 5 jobs across 3 machines to minimize makespan",
+        "jsp_schedule",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Job shop scheduling for our manufacturing floor this week",
+        "jsp_schedule",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Optimize production schedule: 8 jobs, 4 work centers, minimize completion time",
+        "jsp_schedule",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "JSP: Job 1 needs machine A then B, Job 2 needs B then A. Minimize makespan",
+        "jsp_schedule",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Create optimal shop floor schedule for next 5 days",
+        "jsp_schedule",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "CP-SAT job scheduling with precedence constraints and machine capacity",
+        "jsp_schedule",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "What is the minimum makespan for our assembly line schedule?",
+        "jsp_schedule",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Schedule work orders WO-101 to WO-115 on 6 production lines",
+        "jsp_schedule",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Production planning: minimize idle time on machines M1-M4",
+        "jsp_schedule",
+        "or_solve",
+        "inventory",
+    ),
+    LabelledQuery(
+        "Generate a Gantt-optimal schedule for the fabrication shop",
+        "jsp_schedule",
+        "or_solve",
+        "inventory",
+    ),
     # ── vrp_route (10) ──
-    LabelledQuery("Plan delivery routes for 5 trucks to serve 20 customer locations", "vrp_route", "or_solve", "risk"),
-    LabelledQuery("Vehicle routing: depot at Berlin, 8 delivery points, 3 vehicles of capacity 500", "vrp_route", "or_solve", "risk"),
-    LabelledQuery("Optimize last-mile delivery routes for DC-PARIS customers", "vrp_route", "or_solve", "risk"),
-    LabelledQuery("VRP: minimize total distance for weekly customer deliveries", "vrp_route", "or_solve", "risk"),
-    LabelledQuery("Route 4 delivery vehicles from the Hamburg warehouse to all 15 retail sites", "vrp_route", "or_solve", "risk"),
-    LabelledQuery("Create optimal dispatch plan for tomorrow's delivery fleet", "vrp_route", "or_solve", "risk"),
-    LabelledQuery("Capacitated vehicle routing for our regional distribution network", "vrp_route", "or_solve", "risk"),
-    LabelledQuery("Solve CVRP: depot node 0, 12 customers, 2 trucks with capacity 1000 each", "vrp_route", "or_solve", "risk"),
-    LabelledQuery("What is the minimum total travel distance for our delivery fleet?", "vrp_route", "or_solve", "risk"),
-    LabelledQuery("Optimize route plan to reduce fuel costs across delivery network", "vrp_route", "or_solve", "risk"),
-
+    LabelledQuery(
+        "Plan delivery routes for 5 trucks to serve 20 customer locations",
+        "vrp_route",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "Vehicle routing: depot at Berlin, 8 delivery points, 3 vehicles of capacity 500",
+        "vrp_route",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "Optimize last-mile delivery routes for DC-PARIS customers",
+        "vrp_route",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "VRP: minimize total distance for weekly customer deliveries",
+        "vrp_route",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "Route 4 delivery vehicles from the Hamburg warehouse to all 15 retail sites",
+        "vrp_route",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "Create optimal dispatch plan for tomorrow's delivery fleet",
+        "vrp_route",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "Capacitated vehicle routing for our regional distribution network",
+        "vrp_route",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "Solve CVRP: depot node 0, 12 customers, 2 trucks with capacity 1000 each",
+        "vrp_route",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "What is the minimum total travel distance for our delivery fleet?",
+        "vrp_route",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "Optimize route plan to reduce fuel costs across delivery network",
+        "vrp_route",
+        "or_solve",
+        "risk",
+    ),
     # ── robust_allocate (10) ──
-    LabelledQuery("Allocate orders across suppliers under cost uncertainty", "robust_allocate", "or_solve", "risk"),
-    LabelledQuery("Robust sourcing: minimize worst-case cost with omega=2 uncertainty budget", "robust_allocate", "or_solve", "risk"),
-    LabelledQuery("Solve robust min-max allocation for 4 suppliers with cost ranges", "robust_allocate", "or_solve", "risk"),
-    LabelledQuery("SOCP robust optimization: diversify supply sources to hedge cost risk", "robust_allocate", "or_solve", "risk"),
-    LabelledQuery("What is the price of robustness for our current supplier portfolio?", "robust_allocate", "or_solve", "risk"),
-    LabelledQuery("Worst-case optimal allocation across 3 competing suppliers", "robust_allocate", "or_solve", "risk"),
-    LabelledQuery("Robust demand allocation with uncertainty budget omega=1.5", "robust_allocate", "or_solve", "risk"),
-    LabelledQuery("Minimize maximum regret across all supplier scenarios", "robust_allocate", "or_solve", "risk"),
-    LabelledQuery("Robust sourcing strategy under supply cost volatility", "robust_allocate", "or_solve", "risk"),
-    LabelledQuery("CVXPY robust allocation: 5 suppliers, cost_uncertainty=0.2, demand=1000", "robust_allocate", "or_solve", "risk"),
-
+    LabelledQuery(
+        "Allocate orders across suppliers under cost uncertainty",
+        "robust_allocate",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "Robust sourcing: minimize worst-case cost with omega=2 uncertainty budget",
+        "robust_allocate",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "Solve robust min-max allocation for 4 suppliers with cost ranges",
+        "robust_allocate",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "SOCP robust optimization: diversify supply sources to hedge cost risk",
+        "robust_allocate",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "What is the price of robustness for our current supplier portfolio?",
+        "robust_allocate",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "Worst-case optimal allocation across 3 competing suppliers",
+        "robust_allocate",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "Robust demand allocation with uncertainty budget omega=1.5",
+        "robust_allocate",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "Minimize maximum regret across all supplier scenarios",
+        "robust_allocate",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "Robust sourcing strategy under supply cost volatility",
+        "robust_allocate",
+        "or_solve",
+        "risk",
+    ),
+    LabelledQuery(
+        "CVXPY robust allocation: 5 suppliers, cost_uncertainty=0.2, demand=1000",
+        "robust_allocate",
+        "or_solve",
+        "risk",
+    ),
     # ── contract_query (10) ──
-    LabelledQuery("What does supplier TQ-Electronics' force majeure clause say?", "contract_query", "contract_query", "compliance"),
-    LabelledQuery("Check if our contract with LUC-Assemblies allows termination for cause", "contract_query", "contract_query", "compliance"),
-    LabelledQuery("What are the payment terms in the FAB-002 supplier contract?", "contract_query", "contract_query", "compliance"),
-    LabelledQuery("Does the NOR-Parts agreement include quality inspection rights?", "contract_query", "contract_query", "compliance"),
-    LabelledQuery("Find the limitation of liability clause in the KOR-Tech contract", "contract_query", "contract_query", "compliance"),
-    LabelledQuery("What is the dispute resolution mechanism in the SHA-Electronics agreement?", "contract_query", "contract_query", "compliance"),
-    LabelledQuery("Retrieve governing law provisions from all active contracts", "contract_query", "contract_query", "compliance"),
-    LabelledQuery("Does our contract cover pandemic as a force majeure event?", "contract_query", "contract_query", "compliance"),
-    LabelledQuery("What notice period is required for contract termination?", "contract_query", "contract_query", "compliance"),
-    LabelledQuery("Find clauses about price adjustment triggers in the TQ contract", "contract_query", "contract_query", "compliance"),
-
+    LabelledQuery(
+        "What does supplier TQ-Electronics' force majeure clause say?",
+        "contract_query",
+        "contract_query",
+        "compliance",
+    ),
+    LabelledQuery(
+        "Check if our contract with LUC-Assemblies allows termination for cause",
+        "contract_query",
+        "contract_query",
+        "compliance",
+    ),
+    LabelledQuery(
+        "What are the payment terms in the FAB-002 supplier contract?",
+        "contract_query",
+        "contract_query",
+        "compliance",
+    ),
+    LabelledQuery(
+        "Does the NOR-Parts agreement include quality inspection rights?",
+        "contract_query",
+        "contract_query",
+        "compliance",
+    ),
+    LabelledQuery(
+        "Find the limitation of liability clause in the KOR-Tech contract",
+        "contract_query",
+        "contract_query",
+        "compliance",
+    ),
+    LabelledQuery(
+        "What is the dispute resolution mechanism in the SHA-Electronics agreement?",
+        "contract_query",
+        "contract_query",
+        "compliance",
+    ),
+    LabelledQuery(
+        "Retrieve governing law provisions from all active contracts",
+        "contract_query",
+        "contract_query",
+        "compliance",
+    ),
+    LabelledQuery(
+        "Does our contract cover pandemic as a force majeure event?",
+        "contract_query",
+        "contract_query",
+        "compliance",
+    ),
+    LabelledQuery(
+        "What notice period is required for contract termination?",
+        "contract_query",
+        "contract_query",
+        "compliance",
+    ),
+    LabelledQuery(
+        "Find clauses about price adjustment triggers in the TQ contract",
+        "contract_query",
+        "contract_query",
+        "compliance",
+    ),
     # ── multi_step (10) ──
-    LabelledQuery("TQ-Electronics disrupted — find alternatives and optimize new routing cost", "multi_step", "kg_query", "visibility"),
-    LabelledQuery("Which suppliers can replace C-007 and what would be the new MCNF cost?", "multi_step", "kg_query", "visibility"),
-    LabelledQuery("Identify affected products from SHA disruption then schedule recovery jobs", "multi_step", "kg_query", "visibility"),
-    LabelledQuery("Traverse supply network for bearings and then optimize inventory safety stock", "multi_step", "kg_query", "visibility"),
-    LabelledQuery("Find backup sources for component C-012 and re-route 500 units to Berlin DC", "multi_step", "kg_query", "visibility"),
-    LabelledQuery("Map disrupted Tier 2 suppliers and solve minimum-cost reallocation", "multi_step", "kg_query", "visibility"),
-    LabelledQuery("From the KG, identify affected DCs and run VRP for rerouting", "multi_step", "kg_query", "visibility"),
-    LabelledQuery("Analyze supply graph for P-015 then compute robust allocation across backups", "multi_step", "kg_query", "visibility"),
-    LabelledQuery("Check contract for FAB-002 and then optimize their delivery schedule", "multi_step", "kg_query", "visibility"),
-    LabelledQuery("Full end-to-end: KG traversal → MCNF solve → synthesize recommendation", "multi_step", "kg_query", "visibility"),
+    LabelledQuery(
+        "TQ-Electronics disrupted — find alternatives and optimize new routing cost",
+        "multi_step",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Which suppliers can replace C-007 and what would be the new MCNF cost?",
+        "multi_step",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Identify affected products from SHA disruption then schedule recovery jobs",
+        "multi_step",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Traverse supply network for bearings and then optimize inventory safety stock",
+        "multi_step",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Find backup sources for component C-012 and re-route 500 units to Berlin DC",
+        "multi_step",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Map disrupted Tier 2 suppliers and solve minimum-cost reallocation",
+        "multi_step",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "From the KG, identify affected DCs and run VRP for rerouting",
+        "multi_step",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Analyze supply graph for P-015 then compute robust allocation across backups",
+        "multi_step",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Check contract for FAB-002 and then optimize their delivery schedule",
+        "multi_step",
+        "kg_query",
+        "visibility",
+    ),
+    LabelledQuery(
+        "Full end-to-end: KG traversal → MCNF solve → synthesize recommendation",
+        "multi_step",
+        "kg_query",
+        "visibility",
+    ),
 ]
 
-assert len(LABELLED_DATASET) == 100, f"Expected 100 queries, got {len(LABELLED_DATASET)}"
+assert (
+    len(LABELLED_DATASET) == 100
+), f"Expected 100 queries, got {len(LABELLED_DATASET)}"
 
 # ---------------------------------------------------------------------------
 # Tool precision map — which tool should be called for each intent
@@ -250,7 +742,10 @@ def test_route_by_intent_labelled_dataset(sample: LabelledQuery) -> None:
 @pytest.mark.parametrize(
     "sample",
     LABELLED_DATASET,
-    ids=[f"classify-{s.expected_intent[:6]}-{i:03d}" for i, s in enumerate(LABELLED_DATASET)],
+    ids=[
+        f"classify-{s.expected_intent[:6]}-{i:03d}"
+        for i, s in enumerate(LABELLED_DATASET)
+    ],
 )
 async def test_classify_intent_propagates_to_state(sample: LabelledQuery) -> None:
     """classify_intent() must write expected intent+confidence into AgentState."""
@@ -362,6 +857,6 @@ async def test_low_confidence_intent_asks_clarification() -> None:
         result_state = await classify_intent(state)
 
     # Below threshold → intent must be set to "unclear"
-    assert result_state["intent"] == "unclear", (
-        f"Low confidence (0.45) should set intent='unclear', got {result_state['intent']!r}"
-    )
+    assert (
+        result_state["intent"] == "unclear"
+    ), f"Low confidence (0.45) should set intent='unclear', got {result_state['intent']!r}"

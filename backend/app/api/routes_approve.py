@@ -33,13 +33,15 @@ router = APIRouter(prefix="/api/approve", tags=["approval"])
 
 class ApprovalRequest(BaseModel):
     approved: bool = Field(..., description="True = approve, False = reject")
-    approved_by: str = Field(default="supply-chain-manager", description="Approver identifier")
+    approved_by: str = Field(
+        default="supply-chain-manager", description="Approver identifier"
+    )
     reason: str | None = Field(default=None, description="Optional reason / comment")
 
 
 class ApprovalRecord(BaseModel):
     decision_id: str
-    status: str          # pending | approved | rejected
+    status: str  # pending | approved | rejected
     query: str
     intent: str | None
     total_cost: float
@@ -73,12 +75,17 @@ async def _load_record(decision_id: str) -> dict:
     if raw is None:
         raise HTTPException(
             status_code=404,
-            detail=f"Decision {decision_id!r} not found. It may have expired (TTL 24 h) or never existed.",
+            detail=(
+                f"Decision {decision_id!r} not found. "
+                "It may have expired (TTL 24 h) or never existed."
+            ),
         )
     try:
         return json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=500, detail=f"Corrupt record in Redis: {exc}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Corrupt record in Redis: {exc}"
+        ) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -86,14 +93,20 @@ async def _load_record(decision_id: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/{decision_id}", response_model=ApprovalRecord, summary="Check decision status")
+@router.get(
+    "/{decision_id}", response_model=ApprovalRecord, summary="Check decision status"
+)
 async def get_approval_status(decision_id: str) -> ApprovalRecord:
     """Return the current status of a pending HiTL decision."""
     record = await _load_record(decision_id)
     return ApprovalRecord(**record)
 
 
-@router.post("/{decision_id}", response_model=ApprovalRecord, summary="Approve or reject a decision")
+@router.post(
+    "/{decision_id}",
+    response_model=ApprovalRecord,
+    summary="Approve or reject a decision",
+)
 async def submit_approval(decision_id: str, body: ApprovalRequest) -> ApprovalRecord:
     """Supply-chain manager approves or rejects a flagged routing decision.
 
@@ -113,7 +126,6 @@ async def submit_approval(decision_id: str, body: ApprovalRequest) -> ApprovalRe
     record["reason"] = body.reason
 
     # Persist updated record (keep same TTL by re-setting with same key)
-    s = get_settings()
     ttl = await _get_redis().ttl(f"hitl:{decision_id}")
     ttl = max(ttl, 1)  # guard against already-expired edge case
     await _get_redis().setex(f"hitl:{decision_id}", ttl, json.dumps(record))
@@ -121,7 +133,11 @@ async def submit_approval(decision_id: str, body: ApprovalRequest) -> ApprovalRe
     action = "APPROVED" if body.approved else "REJECTED"
     logger.info(
         "HiTL decision %s %s by %s (cost=%.2f, reason=%r)",
-        decision_id, action, body.approved_by, record.get("total_cost", 0), body.reason,
+        decision_id,
+        action,
+        body.approved_by,
+        record.get("total_cost", 0),
+        body.reason,
     )
 
     return ApprovalRecord(**record)

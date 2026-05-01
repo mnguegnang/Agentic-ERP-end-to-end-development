@@ -20,7 +20,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -138,4 +138,4 @@ def get_settings() -> Settings:
 
     Cached after first call — safe for both sync and async contexts.
     """
-    return Settings()
+    return Settings()  # type: ignore[call-arg]

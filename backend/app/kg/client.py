@@ -56,7 +56,7 @@ async def execute_read(cypher: str, **params: object) -> list[dict]:
     try:
         driver = await get_driver()
         async with driver.session() as session:
-            result = await session.run(cypher, **params)
+            result = await session.run(cypher, **params)  # type: ignore[arg-type]
             return await result.data()
     except Exception as exc:
         logger.warning("execute_read failed: %s", exc)

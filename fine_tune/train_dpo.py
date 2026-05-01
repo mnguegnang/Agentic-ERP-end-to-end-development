@@ -69,6 +69,7 @@ def seed_everything(seed: int) -> None:
     np.random.seed(seed)
     try:
         import torch
+
         torch.manual_seed(seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
@@ -84,6 +85,7 @@ def seed_everything(seed: int) -> None:
 def detect_device() -> str:
     try:
         import torch
+
         if torch.cuda.is_available():
             device_count = torch.cuda.device_count()
             for i in range(device_count):
@@ -115,6 +117,7 @@ def load_model_and_tokenizer(base_model: str) -> tuple[Any, Any]:
 
     if cuda_available:
         from transformers import BitsAndBytesConfig  # type: ignore[import-untyped]
+
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
@@ -159,6 +162,7 @@ def attach_lora(model: Any) -> Any:
     """
     try:
         from peft import LoraConfig, TaskType, get_peft_model  # type: ignore[import-untyped]
+
         lora_config = LoraConfig(
             r=LORA_R,
             lora_alpha=LORA_ALPHA,
@@ -172,7 +176,8 @@ def attach_lora(model: Any) -> Any:
         return model
     except Exception as exc:
         logger.warning(
-            "LoRA attachment failed (%s) — running without adapter (CPU smoke test).", exc
+            "LoRA attachment failed (%s) — running without adapter (CPU smoke test).",
+            exc,
         )
         return model
 
@@ -276,7 +281,10 @@ def train(
 
     logger.info(
         "Starting DPO training (epochs=%d, max_steps=%d, beta=%.2f, bf16=%s)...",
-        NUM_EPOCHS, max_steps, DPO_BETA, bf16,
+        NUM_EPOCHS,
+        max_steps,
+        DPO_BETA,
+        bf16,
     )
     trainer.train()
 
@@ -294,19 +302,22 @@ def train(
 def main() -> None:
     parser = argparse.ArgumentParser(description="DPO fine-tuning (§6.3.2)")
     parser.add_argument(
-        "--base-model", "--base_model",
+        "--base-model",
+        "--base_model",
         dest="base_model",
         default=os.environ.get("DPO_BASE_MODEL", BASE_MODEL),
         help="HuggingFace model ID or local path",
     )
     parser.add_argument(
-        "--dataset-path", "--dataset",
+        "--dataset-path",
+        "--dataset",
         dest="dataset",
         default=os.environ.get("DPO_DATASET_PATH", "data/dpo_training/dpo_dataset"),
         help="Path to HuggingFace Dataset saved by prepare_dataset.py",
     )
     parser.add_argument(
-        "--output-dir", "--output",
+        "--output-dir",
+        "--output",
         dest="output",
         default=os.environ.get("DPO_OUTPUT_DIR", OUTPUT_DIR),
         help="Output directory for LoRA adapter checkpoint",
@@ -348,4 +359,3 @@ if __name__ == "__main__":
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
     main()
-

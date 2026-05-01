@@ -11,11 +11,9 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from app.agents.graph_state import AgentState
 from app.agents.orchestrator import classify_intent, route_by_intent
 from app.api.schemas import IntentClassification
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -76,20 +74,26 @@ def _patch_settings(mock_fn: MagicMock) -> None:
 def test_route_by_intent_all_intents(intent: str | None, expected_route: str) -> None:
     state = _make_state(intent)
     result = route_by_intent(state)
-    assert result == expected_route, (
-        f"intent={intent!r} should route to {expected_route!r}, got {result!r}"
-    )
+    assert (
+        result == expected_route
+    ), f"intent={intent!r} should route to {expected_route!r}, got {result!r}"
 
 
 def test_route_by_intent_solver_direct_set_is_complete() -> None:
     """All expected solver direct intents route to 'or_solve'."""
     solver_intents = {
-        "mcnf_solve", "meio_optimize", "bullwhip_analyze",
-        "jsp_schedule", "vrp_route", "robust_allocate",
+        "mcnf_solve",
+        "meio_optimize",
+        "bullwhip_analyze",
+        "jsp_schedule",
+        "vrp_route",
+        "robust_allocate",
     }
     for intent in solver_intents:
         state = _make_state(intent)
-        assert route_by_intent(state) == "or_solve", f"{intent} should route to or_solve"
+        assert (
+            route_by_intent(state) == "or_solve"
+        ), f"{intent} should route to or_solve"
 
 
 # ---------------------------------------------------------------------------
@@ -106,8 +110,10 @@ async def test_classify_intent_high_confidence() -> None:
         ddd_context="logistics",
         reasoning="The query asks for network flow optimisation.",
     )
-    with patch("app.agents.orchestrator.get_settings") as mock_settings, \
-         patch("app.agents.orchestrator.ChatOpenAI") as mock_llm_cls:
+    with (
+        patch("app.agents.orchestrator.get_settings") as mock_settings,
+        patch("app.agents.orchestrator.ChatOpenAI") as mock_llm_cls,
+    ):
         _patch_settings(mock_settings)
         mock_llm = MagicMock()
         mock_structured = MagicMock()
@@ -132,8 +138,10 @@ async def test_classify_intent_low_confidence_sets_unclear() -> None:
         ddd_context="logistics",
         reasoning="Uncertain.",
     )
-    with patch("app.agents.orchestrator.get_settings") as mock_settings, \
-         patch("app.agents.orchestrator.ChatOpenAI") as mock_llm_cls:
+    with (
+        patch("app.agents.orchestrator.get_settings") as mock_settings,
+        patch("app.agents.orchestrator.ChatOpenAI") as mock_llm_cls,
+    ):
         _patch_settings(mock_settings)
         mock_llm = MagicMock()
         mock_structured = MagicMock()
@@ -150,8 +158,10 @@ async def test_classify_intent_low_confidence_sets_unclear() -> None:
 @pytest.mark.asyncio
 async def test_classify_intent_llm_failure_returns_unclear() -> None:
     """LLM call failure falls back to intent='unclear', confidence=0.0."""
-    with patch("app.agents.orchestrator.get_settings") as mock_settings, \
-         patch("app.agents.orchestrator.ChatOpenAI") as mock_llm_cls:
+    with (
+        patch("app.agents.orchestrator.get_settings") as mock_settings,
+        patch("app.agents.orchestrator.ChatOpenAI") as mock_llm_cls,
+    ):
         _patch_settings(mock_settings)
         mock_llm = MagicMock()
         mock_structured = MagicMock()

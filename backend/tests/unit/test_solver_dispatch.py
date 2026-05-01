@@ -12,10 +12,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from app.agents.graph_state import AgentState
 from app.agents.orchestrator import solver_dispatch_node
-
 
 # ---------------------------------------------------------------------------
 # Helpers
