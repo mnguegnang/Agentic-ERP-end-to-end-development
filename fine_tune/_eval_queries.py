@@ -129,5 +129,7 @@ EVAL_QUERIES_BY_INTENT: dict[str, list[str]] = {
     ],
 }
 
-assert all(len(v) == 10 for v in EVAL_QUERIES_BY_INTENT.values()), "Each intent needs 10 queries"
+assert all(
+    len(v) == 10 for v in EVAL_QUERIES_BY_INTENT.values()
+), "Each intent needs 10 queries"
 assert len(EVAL_QUERIES_BY_INTENT) == 10, "Must have 10 intents"

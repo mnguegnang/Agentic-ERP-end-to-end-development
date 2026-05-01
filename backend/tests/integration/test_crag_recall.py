@@ -27,7 +27,6 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from app.rag.retriever import CRAGResult, reciprocal_rank_fusion
 
 # ---------------------------------------------------------------------------
@@ -124,9 +123,14 @@ CRAG_TEST_CASES: list[CRAGTestCase] = [
 def _build_corpus_from_chunks(chunks: list[dict]) -> list[dict]:
     """Inject a small corpus of chunks including the ground-truth chunk."""
     distractors = [
-        {"id": f"distractor-{i}", "text": f"General terms and conditions clause {i}. "
-         "Standard boilerplate text about governing law and applicable regulations.",
-         "score": 0.3, "contract_id": 99, "section": f"Section {i}"}
+        {
+            "id": f"distractor-{i}",
+            "text": f"General terms and conditions clause {i}. "
+            "Standard boilerplate text about governing law and applicable regulations.",
+            "score": 0.3,
+            "contract_id": 99,
+            "section": f"Section {i}",
+        }
         for i in range(1, 8)
     ]
     return chunks + distractors
@@ -135,8 +139,13 @@ def _build_corpus_from_chunks(chunks: list[dict]) -> list[dict]:
 def _mock_pgvector_results(ground_truth: dict) -> list[dict]:
     """Return the ground-truth chunk as the top dense retrieval result."""
     return [ground_truth] + [
-        {"id": f"dense-{i}", "text": f"Dense retrieval result {i} - general contract text.",
-         "score": 0.6 - i * 0.05, "contract_id": 99, "section": f"Section {i + 1}"}
+        {
+            "id": f"dense-{i}",
+            "text": f"Dense retrieval result {i} - general contract text.",
+            "score": 0.6 - i * 0.05,
+            "contract_id": 99,
+            "section": f"Section {i + 1}",
+        }
         for i in range(1, 5)
     ]
 
@@ -150,14 +159,17 @@ def test_rrf_fusion_promotes_documents_appearing_in_both_lists() -> None:
     """A document in both dense and sparse results gets a higher RRF score (§2.3)."""
     shared_doc = {"id": "shared-1", "text": "Force Majeure clause text.", "score": 0.9}
     dense = [shared_doc, {"id": "dense-only", "text": "Dense only doc.", "score": 0.8}]
-    sparse = [shared_doc, {"id": "sparse-only", "text": "Sparse only doc.", "score": 0.7}]
+    sparse = [
+        shared_doc,
+        {"id": "sparse-only", "text": "Sparse only doc.", "score": 0.7},
+    ]
 
     fused = reciprocal_rank_fusion(dense, sparse, k=60)
 
     # The shared document must appear first (highest RRF score)
-    assert fused[0]["id"] == "shared-1", (
-        f"RRF fusion should rank shared doc first, got {fused[0]['id']!r}"
-    )
+    assert (
+        fused[0]["id"] == "shared-1"
+    ), f"RRF fusion should rank shared doc first, got {fused[0]['id']!r}"
 
 
 def test_rrf_fusion_k60_smoothing_constant() -> None:
@@ -165,7 +177,6 @@ def test_rrf_fusion_k60_smoothing_constant() -> None:
     doc = {"id": "doc-1", "text": "Only doc in one list."}
     fused = reciprocal_rank_fusion([doc], [], k=60)
 
-    expected_score_approx = 1.0 / (60 + 1)
     # Score is embedded indirectly — verify doc is returned
     assert len(fused) == 1
     assert fused[0]["id"] == "doc-1"
@@ -226,7 +237,8 @@ async def test_crag_recall_at_5_per_query(tc: CRAGTestCase) -> None:
             new=AsyncMock(
                 side_effect=lambda q, doc: (
                     "correct"
-                    if tc.expected_section_keyword.lower() in (doc.get("text") or "").lower()
+                    if tc.expected_section_keyword.lower()
+                    in (doc.get("text") or "").lower()
                     else "ambiguous"
                 )
             ),
@@ -238,9 +250,9 @@ async def test_crag_recall_at_5_per_query(tc: CRAGTestCase) -> None:
         f"[{tc.label}] CRAG evaluator returned 'incorrect' — ground-truth chunk not retrieved.\n"
         f"Returned {len(result.documents)} documents."
     )
-    assert len(result.documents) > 0, (
-        f"[{tc.label}] CRAG returned 0 documents for query: {tc.query!r}"
-    )
+    assert (
+        len(result.documents) > 0
+    ), f"[{tc.label}] CRAG returned 0 documents for query: {tc.query!r}"
     # Top result must contain the expected section keyword
     top_doc_text = result.documents[0].get("text", "")
     assert tc.expected_section_keyword.lower() in top_doc_text.lower(), (
@@ -260,16 +272,16 @@ def test_crag_recall_at_5_aggregate_meets_m5_target() -> None:
     # Ground-truth section keywords (used as recall signal)
     expected_keywords = [tc.expected_section_keyword for tc in CRAG_TEST_CASES]
     # All 5 keyword strings must be non-empty and unique
-    assert len(set(expected_keywords)) == 5, (
-        "Test dataset has duplicate section keywords — check CRAG_TEST_CASES"
-    )
+    assert (
+        len(set(expected_keywords)) == 5
+    ), "Test dataset has duplicate section keywords — check CRAG_TEST_CASES"
     # Target threshold check (threshold = 4/5 = 0.80)
     threshold = 0.80
     n_cases = len(CRAG_TEST_CASES)
     min_passing = int(threshold * n_cases)  # 4
-    assert n_cases >= min_passing, (
-        f"Dataset has {n_cases} cases, minimum passing required = {min_passing}"
-    )
+    assert (
+        n_cases >= min_passing
+    ), f"Dataset has {n_cases} cases, minimum passing required = {min_passing}"
     # The parametric tests above verify each individually.
     # This test ensures the dataset itself satisfies the M5 structure.
 
@@ -294,7 +306,10 @@ async def test_crag_returns_no_documents_when_evaluation_incorrect() -> None:
 
     with (
         patch("app.rag.retriever._pgvector_search", new=AsyncMock(return_value=[doc])),
-        patch("app.rag.retriever._load_bm25_corpus", new=AsyncMock(return_value=([doc], None))),
+        patch(
+            "app.rag.retriever._load_bm25_corpus",
+            new=AsyncMock(return_value=([doc], None)),
+        ),
         patch(
             "app.rag.retriever.rerank",
             side_effect=lambda q, docs, **kw: docs[:5],
@@ -309,9 +324,9 @@ async def test_crag_returns_no_documents_when_evaluation_incorrect() -> None:
         )
 
     assert result.evaluation == "incorrect"
-    assert result.documents == [], (
-        "CRAG must return empty documents when evaluation='incorrect' (§6.4 fallback)"
-    )
-    assert result.fallback == "no_answer", (
-        "CRAG must set fallback='no_answer' when evaluation='incorrect'"
-    )
+    assert (
+        result.documents == []
+    ), "CRAG must return empty documents when evaluation='incorrect' (§6.4 fallback)"
+    assert (
+        result.fallback == "no_answer"
+    ), "CRAG must set fallback='no_answer' when evaluation='incorrect'"

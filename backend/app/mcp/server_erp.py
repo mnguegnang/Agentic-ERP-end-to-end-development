@@ -64,10 +64,10 @@ async def query_erp(query_type: str, filters: dict) -> dict:
                 return {
                     "results": [
                         {
-                            "id": r.product_id,
+                            "id": r.product_id,  # type: ignore[attr-defined]
                             "name": r.name,
-                            "product_number": r.product_number,
-                            "standard_cost": float(r.standard_cost or 0),
+                            "product_number": r.product_number,  # type: ignore[attr-defined]
+                            "standard_cost": float(r.standard_cost or 0),  # type: ignore[attr-defined]
                         }
                         for r in rows
                     ]

@@ -61,10 +61,10 @@ async def evaluate_relevance(query: str, top_doc: dict | None) -> str:
             base_url=s.llm_base_url,
             api_key=s.github_token,  # type: ignore[arg-type]
             temperature=0.0,
-            max_tokens=256,
+            max_tokens=256,  # type: ignore[call-arg]
         )
         structured = llm.with_structured_output(_RelevanceLabel)
-        result: _RelevanceLabel = await structured.ainvoke(
+        result: _RelevanceLabel = await structured.ainvoke(  # type: ignore[assignment]
             [
                 SystemMessage(_EVAL_SYSTEM_PROMPT),
                 HumanMessage(f"Query: {query}\n\nDocument chunk:\n{chunk_text[:800]}"),

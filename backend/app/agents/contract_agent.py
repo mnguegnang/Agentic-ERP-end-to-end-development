@@ -20,7 +20,15 @@ async def contract_agent_node(state: AgentState) -> AgentState:
     # Extract query from the latest human message in the state
     messages = state.get("messages") or []
     msg = messages[-1] if messages else None
-    query: str = (msg.content if hasattr(msg, "content") else (msg.get("content", "") if isinstance(msg, dict) else "")) if msg else ""
+    query: str = (
+        (
+            msg.content
+            if hasattr(msg, "content")
+            else (msg.get("content", "") if isinstance(msg, dict) else "")
+        )
+        if msg
+        else ""
+    )
 
     if not query:
         logger.warning("contract_agent: empty query in state messages")

@@ -70,7 +70,9 @@ def fetch_langsmith_runs(
         raise ValueError("LANGCHAIN_API_KEY environment variable not set.")
 
     client = Client(api_key=api_key)
-    logger.info("Fetching runs from LangSmith project %r (target: %d)...", project, min_runs)
+    logger.info(
+        "Fetching runs from LangSmith project %r (target: %d)...", project, min_runs
+    )
 
     runs = list(
         client.list_runs(
@@ -163,8 +165,8 @@ def build_preference_pairs(
         pref = preferred_runs[0]
         dispref = dispreferred_runs[0]
 
-        chosen = (pref.get("outputs", {}).get("content") or "")
-        rejected = (dispref.get("outputs", {}).get("content") or "")
+        chosen = pref.get("outputs", {}).get("content") or ""
+        rejected = dispref.get("outputs", {}).get("content") or ""
 
         if not chosen or not rejected or chosen == rejected:
             continue
@@ -203,6 +205,7 @@ def save_dataset(pairs: list[dict[str, str]], output_path: str) -> None:
         ) from e
 
     import os
+
     os.makedirs(output_path, exist_ok=True)
 
     ds = Dataset.from_list(pairs)
@@ -233,46 +236,71 @@ def save_dataset(pairs: list[dict[str, str]], output_path: str) -> None:
 def _synthetic_pairs(n: int) -> list[dict[str, str]]:
     """Generate n synthetic DPO preference pairs for smoke-testing."""
     templates = [
-        ("kg_query", "Display the supply network for component BRG-009",
-         "traverse_supply_network(entity_name='BRG-009', relation_type='PROVIDES')",
-         "I don't know the answer."),
-        ("mcnf_solve", "Optimize flow of 300 units from S1 to D2",
-         "solve_mcnf(nodes=['S1','D2'], arcs=[...], commodities=[...])",
-         "The flow cannot be determined."),
-        ("contract_query", "What does the force majeure clause say?",
-         "search_contracts(query_text='force majeure clause conditions')",
-         "I am unable to search contracts."),
-        ("disruption_resource", "Supplier BRA-Metals is offline — find alternatives",
-         "solve_disruption(disrupted_supplier='BRA-Metals', component='metal')",
-         "No alternative found."),
-        ("meio_optimize", "Optimize safety stock for 3-echelon network",
-         "solve_meio_gsm(stages=[...], service_level=0.95)",
-         "Cannot optimize inventory."),
+        (
+            "kg_query",
+            "Display the supply network for component BRG-009",
+            "traverse_supply_network(entity_name='BRG-009', relation_type='PROVIDES')",
+            "I don't know the answer.",
+        ),
+        (
+            "mcnf_solve",
+            "Optimize flow of 300 units from S1 to D2",
+            "solve_mcnf(nodes=['S1','D2'], arcs=[...], commodities=[...])",
+            "The flow cannot be determined.",
+        ),
+        (
+            "contract_query",
+            "What does the force majeure clause say?",
+            "search_contracts(query_text='force majeure clause conditions')",
+            "I am unable to search contracts.",
+        ),
+        (
+            "disruption_resource",
+            "Supplier BRA-Metals is offline — find alternatives",
+            "solve_disruption(disrupted_supplier='BRA-Metals', component='metal')",
+            "No alternative found.",
+        ),
+        (
+            "meio_optimize",
+            "Optimize safety stock for 3-echelon network",
+            "solve_meio_gsm(stages=[...], service_level=0.95)",
+            "Cannot optimize inventory.",
+        ),
     ]
     pairs = []
     for i in range(n):
         tmpl = templates[i % len(templates)]
-        pairs.append({"prompt": tmpl[1], "chosen": tmpl[2], "rejected": tmpl[3],
-                       "intent": tmpl[0], "tool_used": tmpl[2].split("(")[0]})
+        pairs.append(
+            {
+                "prompt": tmpl[1],
+                "chosen": tmpl[2],
+                "rejected": tmpl[3],
+                "intent": tmpl[0],
+                "tool_used": tmpl[2].split("(")[0],
+            }
+        )
     return pairs
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="DPO dataset curation (§6.3.1)")
     parser.add_argument(
-        "--project-name", "--project",
+        "--project-name",
+        "--project",
         dest="project",
         default=os.environ.get("LANGSMITH_PROJECT", "agentic-erp-supply-chain"),
         help="LangSmith project name",
     )
     parser.add_argument(
-        "--output-path", "--output",
+        "--output-path",
+        "--output",
         dest="output",
         default="data/dpo_training/dpo_dataset",
         help="Output directory for HuggingFace Dataset",
     )
     parser.add_argument(
-        "--min-pairs", "--min_pairs",
+        "--min-pairs",
+        "--min_pairs",
         dest="min_pairs",
         type=int,
         default=5000,
@@ -294,7 +322,9 @@ def main() -> None:
         pairs = _synthetic_pairs(args.min_pairs)
         logger.info("Generated %d synthetic pairs.", len(pairs))
         save_dataset(pairs, args.output)
-        logger.info("Synthetic dataset saved to %s. Ready for train_dpo.py.", args.output)
+        logger.info(
+            "Synthetic dataset saved to %s. Ready for train_dpo.py.", args.output
+        )
         return
 
     if args.dry_run:

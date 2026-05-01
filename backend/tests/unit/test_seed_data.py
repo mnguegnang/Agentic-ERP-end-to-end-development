@@ -2,6 +2,7 @@
 
 Validates structural integrity of the seed data without any DB/network calls.
 """
+
 from __future__ import annotations
 
 from scripts.seed_adventureworks import (
@@ -19,11 +20,20 @@ from scripts.seed_contracts import _FM_VARIANTS, _generate_contract_text
 
 class TestSupplierData:
     def test_exactly_14_suppliers(self) -> None:
-        assert len(SUPPLIERS) == 14, f"Blueprint requires 14 suppliers, got {len(SUPPLIERS)}"
+        assert (
+            len(SUPPLIERS) == 14
+        ), f"Blueprint requires 14 suppliers, got {len(SUPPLIERS)}"
 
     def test_supplier_fields_present(self) -> None:
-        required = {"account_number", "name", "credit_rating", "tier_level",
-                    "reliability_score", "lead_time_days", "country_code"}
+        required = {
+            "account_number",
+            "name",
+            "credit_rating",
+            "tier_level",
+            "reliability_score",
+            "lead_time_days",
+            "country_code",
+        }
         for s in SUPPLIERS:
             assert required.issubset(s.keys()), f"Supplier missing fields: {s}"
 
@@ -43,7 +53,9 @@ class TestSupplierData:
     def test_tier1_has_no_parent(self) -> None:
         for s in SUPPLIERS:
             if s["tier_level"] == 1:
-                assert s["parent_idx"] is None, f"Tier-1 supplier has parent: {s['name']}"
+                assert (
+                    s["parent_idx"] is None
+                ), f"Tier-1 supplier has parent: {s['name']}"
 
     def test_parent_indices_are_valid(self) -> None:
         n = len(SUPPLIERS)
@@ -64,13 +76,17 @@ class TestComponentAndProductData:
         assert len(PRODUCTS) == 4
 
     def test_component_product_numbers_unique(self) -> None:
-        nums = [c["product_number"] for c in COMPONENTS] + [p["product_number"] for p in PRODUCTS]
+        nums = [c["product_number"] for c in COMPONENTS] + [
+            p["product_number"] for p in PRODUCTS
+        ]
         assert len(nums) == len(set(nums)), "Duplicate product numbers"
 
     def test_bom_references_valid_indices(self) -> None:
         for prod_idx, comp_idx, qty in BOM_ROWS:
             assert 0 <= prod_idx < len(PRODUCTS), f"Invalid product index {prod_idx}"
-            assert 0 <= comp_idx < len(COMPONENTS), f"Invalid component index {comp_idx}"
+            assert (
+                0 <= comp_idx < len(COMPONENTS)
+            ), f"Invalid component index {comp_idx}"
             assert qty > 0, f"BOM quantity must be positive, got {qty}"
 
 
@@ -92,8 +108,9 @@ class TestContractData:
 
     def test_each_fm_variant_contains_force_majeure(self) -> None:
         for i, variant in enumerate(_FM_VARIANTS):
-            assert "force majeure" in variant.lower() or "Force Majeure" in variant, \
-                f"FM variant {i} missing 'Force Majeure'"
+            assert (
+                "force majeure" in variant.lower() or "Force Majeure" in variant
+            ), f"FM variant {i} missing 'Force Majeure'"
 
     def test_fm_variants_are_distinct(self) -> None:
         # Each variant must be unique (no duplicates)
@@ -124,7 +141,9 @@ class TestContractData:
             expected_variant = _FM_VARIANTS[(cid - 1) % 5]
             # Check a distinctive sentence from the expected variant
             snippet = expected_variant.split("\n")[2].strip()[:50]
-            assert snippet in text, f"Contract {cid} missing FM variant {(cid-1)%5} content"
+            assert (
+                snippet in text
+            ), f"Contract {cid} missing FM variant {(cid-1)%5} content"
 
 
 class TestSupplierProvidesData:

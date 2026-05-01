@@ -52,6 +52,7 @@ def _get_redis() -> aioredis.Redis:  # type: ignore[type-arg]
         _REDIS = aioredis.from_url(get_settings().redis_url, decode_responses=True)
     return _REDIS
 
+
 # Intents that route directly to solver_dispatch without visiting kg_agent first
 _SOLVER_DIRECT_INTENTS = frozenset(
     {
@@ -95,7 +96,8 @@ CRITICAL: If the context contains a line starting with "NOTE: This action requir
 you MUST begin your response with a clearly visible warning block:
 
 ⚠️ HUMAN APPROVAL REQUIRED
-This routing decision exceeds the $10,000 cost threshold and must be reviewed and approved by a supply-chain manager before execution.
+This routing decision exceeds the $10,000 cost threshold and must be reviewed
+and approved by a supply-chain manager before execution.
 
 Then continue with the analysis below that warning."""
 
@@ -107,7 +109,7 @@ def _make_llm(max_tokens: int = 1024) -> ChatOpenAI:
         base_url=s.llm_base_url,
         api_key=s.github_token,  # type: ignore[arg-type]
         temperature=0.0,
-        max_tokens=max_tokens,
+        max_tokens=max_tokens,  # type: ignore[call-arg]
     )
 
 
@@ -133,7 +135,7 @@ async def classify_intent(state: AgentState) -> AgentState:
     try:
         llm = _make_llm(max_tokens=512)
         structured = llm.with_structured_output(IntentClassification)
-        result: IntentClassification = await structured.ainvoke(
+        result: IntentClassification = await structured.ainvoke(  # type: ignore[assignment]
             [
                 SystemMessage(_INTENT_SYSTEM),
                 HumanMessage(f"Query: {query}"),
@@ -150,8 +152,14 @@ async def classify_intent(state: AgentState) -> AgentState:
             "ddd_context": result.ddd_context,
         }
     except Exception as exc:
-        logger.warning("classify_intent failed: %s — falling back to keyword classifier", exc)
+        logger.warning(
+            "classify_intent failed: %s — falling back to keyword classifier", exc
+        )
         intent, confidence, ddd = _keyword_classify(query)
+        s = get_settings()
+        if confidence < s.intent_confidence_threshold:
+            intent = "unclear"
+            confidence = 0.0
         return {
             **state,
             "intent": intent,
@@ -164,21 +172,21 @@ async def classify_intent(state: AgentState) -> AgentState:
 # Ordered from most-specific to least-specific.
 _KEYWORD_RULES: list[tuple[frozenset[str], str, str]] = [
     # (required_keywords, intent, ddd_context)
-    (frozenset({"arc", "cost_per_unit"}),              "mcnf_solve",    "logistics"),
-    (frozenset({"route", "units", "capacity"}),        "mcnf_solve",    "logistics"),
-    (frozenset({"route", "units", "demand"}),          "mcnf_solve",    "logistics"),
-    (frozenset({"minimum cost", "network flow"}),      "mcnf_solve",    "logistics"),
-    (frozenset({"mcnf"}),                              "mcnf_solve",    "logistics"),
-    (frozenset({"vehicle", "depot"}),                  "vrp_route",     "logistics"),
-    (frozenset({"vrp"}),                               "vrp_route",     "logistics"),
-    (frozenset({"schedule", "job", "machine"}),        "jsp_schedule",  "visibility"),
-    (frozenset({"inventory", "echelon"}),              "meio_optimize", "inventory"),
-    (frozenset({"reorder", "safety stock"}),           "meio_optimize", "inventory"),
-    (frozenset({"bullwhip", "demand amplification"}),  "bullwhip_analyze", "visibility"),
-    (frozenset({"contract", "clause"}),                "contract_query","compliance"),
-    (frozenset({"force majeure"}),                     "contract_query","compliance"),
-    (frozenset({"supplier", "tier"}),                  "kg_query",      "sourcing"),
-    (frozenset({"disruption", "alternative"}),         "disruption_resource", "visibility"),
+    (frozenset({"arc", "cost_per_unit"}), "mcnf_solve", "logistics"),
+    (frozenset({"route", "units", "capacity"}), "mcnf_solve", "logistics"),
+    (frozenset({"route", "units", "demand"}), "mcnf_solve", "logistics"),
+    (frozenset({"minimum cost", "network flow"}), "mcnf_solve", "logistics"),
+    (frozenset({"mcnf"}), "mcnf_solve", "logistics"),
+    (frozenset({"vehicle", "depot"}), "vrp_route", "logistics"),
+    (frozenset({"vrp"}), "vrp_route", "logistics"),
+    (frozenset({"schedule", "job", "machine"}), "jsp_schedule", "visibility"),
+    (frozenset({"inventory", "echelon"}), "meio_optimize", "inventory"),
+    (frozenset({"reorder", "safety stock"}), "meio_optimize", "inventory"),
+    (frozenset({"bullwhip", "demand amplification"}), "bullwhip_analyze", "visibility"),
+    (frozenset({"contract", "clause"}), "contract_query", "compliance"),
+    (frozenset({"force majeure"}), "contract_query", "compliance"),
+    (frozenset({"supplier", "tier"}), "kg_query", "sourcing"),
+    (frozenset({"disruption", "alternative"}), "disruption_resource", "visibility"),
 ]
 
 
@@ -218,7 +226,7 @@ async def _extract_mcnf_params(query: str) -> SolveMcnfInput | None:
     try:
         llm = _make_llm(max_tokens=512)
         structured = llm.with_structured_output(SolveMcnfInput)
-        result: SolveMcnfInput = await structured.ainvoke(
+        result: SolveMcnfInput = await structured.ainvoke(  # type: ignore[assignment]
             [
                 SystemMessage(
                     "Extract minimum-cost-network-flow parameters from the supply-chain "
@@ -246,41 +254,54 @@ def _regex_extract_mcnf_params(query: str) -> SolveMcnfInput | None:
     q = query
 
     # Extract node IDs from parentheses, e.g. "factory (node A)"
-    node_ids = re.findall(r'\(([^)]+)\)', q)
+    node_ids = re.findall(r"\(([^)]+)\)", q)
 
     # Also try bare labels like "node A", "node B", "factory", "Tokyo DC"
     if len(node_ids) < 2:
         # fall back: split on "from ... to ..."
         m = re.search(
-            r'from\s+([A-Za-z0-9_ ]+?)\s+to\s+([A-Za-z0-9_ ]+?)[\.\,\s]',
-            q, re.IGNORECASE,
+            r"from\s+([A-Za-z0-9_ ]+?)\s+to\s+([A-Za-z0-9_ ]+?)[\.\,\s]",
+            q,
+            re.IGNORECASE,
         )
         if m:
             node_ids = [m.group(1).strip(), m.group(2).strip()]
 
     if len(node_ids) < 2:
-        logger.warning("regex_extract_mcnf_params: could not parse 2 node IDs from query")
+        logger.warning(
+            "regex_extract_mcnf_params: could not parse 2 node IDs from query"
+        )
         return None
 
     src, snk = node_ids[0], node_ids[1]
 
     # capacity
-    cap_m = re.search(r'capacity\s*[=:]?\s*([\d,]+(?:\.\d+)?)', q, re.IGNORECASE)
-    capacity = float(cap_m.group(1).replace(',', '')) if cap_m else 10_000.0
+    cap_m = re.search(r"capacity\s*[=:]?\s*([\d,]+(?:\.\d+)?)", q, re.IGNORECASE)
+    capacity = float(cap_m.group(1).replace(",", "")) if cap_m else 10_000.0
 
     # cost_per_unit
-    cpu_m = re.search(r'cost_per_unit\s*=?\s*\$?([\d,]+(?:\.\d+)?)', q, re.IGNORECASE)
-    cost_per_unit = float(cpu_m.group(1).replace(',', '')) if cpu_m else 1.0
+    cpu_m = re.search(r"cost_per_unit\s*=?\s*\$?([\d,]+(?:\.\d+)?)", q, re.IGNORECASE)
+    cost_per_unit = float(cpu_m.group(1).replace(",", "")) if cpu_m else 1.0
 
     # demand — first integer/float followed by "units"
-    dem_m = re.search(r'([\d,]+(?:\.\d+)?)\s+units', q, re.IGNORECASE)
-    demand = float(dem_m.group(1).replace(',', '')) if dem_m else 1.0
+    dem_m = re.search(r"([\d,]+(?:\.\d+)?)\s+units", q, re.IGNORECASE)
+    demand = float(dem_m.group(1).replace(",", "")) if dem_m else 1.0
 
     try:
         from app.api.schemas import Arc, Commodity  # local import to avoid circulars
+
         return SolveMcnfInput(
             nodes=[src, snk],
-            arcs=[Arc.model_validate({"from": src, "to": snk, "capacity": capacity, "cost_per_unit": cost_per_unit})],
+            arcs=[
+                Arc.model_validate(
+                    {
+                        "from": src,
+                        "to": snk,
+                        "capacity": capacity,
+                        "cost_per_unit": cost_per_unit,
+                    }
+                )
+            ],
             commodities=[Commodity(source=src, sink=snk, demand=demand)],
         )
     except Exception as exc:
@@ -314,7 +335,7 @@ async def solver_dispatch_node(state: AgentState) -> AgentState:
                 solver_out = {"status": "param_extraction_failed"}
 
         elif intent == "jsp_schedule":
-            solver_out = solve_jsp(jobs=[], num_machines=1)
+            solver_out = solve_jsp(jobs=[])
 
         elif intent == "vrp_route":
             solver_out = solve_vrp(
@@ -322,21 +343,19 @@ async def solver_dispatch_node(state: AgentState) -> AgentState:
             )
 
         elif intent == "robust_allocate":
-            solver_out = solve_robust_minmax(
-                scenarios=[], demands=[], capacities=[], costs=[]
-            )
+            solver_out = solve_robust_minmax(suppliers=[], demand=0.0, omega=1.0)
 
         elif intent == "meio_optimize":
-            solver_out = solve_meio_gsm(
-                stages=[], lead_times=[], demand_means=[], demand_stds=[], costs=[]
-            )
+            solver_out = solve_meio_gsm(stages=[], service_level=0.95)
 
         elif intent == "bullwhip_analyze":
-            solver_out = analyze_bullwhip(demand_series=[])
+            solver_out = analyze_bullwhip(
+                demand_series=[], lead_time=1, forecast_window=4, num_echelons=2
+            )
 
         elif intent == "disruption_resource":
             solver_out = solve_disruption(
-                affected_suppliers=[], disruption_days=0, alternatives=[]
+                affected_components=[], alt_suppliers=[], demands=[]
             )
 
         else:
@@ -357,28 +376,39 @@ async def solver_dispatch_node(state: AgentState) -> AgentState:
         decision_id = str(uuid.uuid4())
         messages = state.get("messages") or []
         query = _msg_content(messages[-1]) if messages else ""
-        pending_record = json.dumps({
-            "decision_id": decision_id,
-            "status": "pending",        # pending | approved | rejected
-            "query": query,
-            "intent": state.get("intent"),
-            "solver_output": solver_out,
-            "total_cost": cost,
-            "approved_by": None,
-            "reason": None,
-        })
+        pending_record = json.dumps(
+            {
+                "decision_id": decision_id,
+                "status": "pending",  # pending | approved | rejected
+                "query": query,
+                "intent": state.get("intent"),
+                "solver_output": solver_out,
+                "total_cost": cost,
+                "approved_by": None,
+                "reason": None,
+            }
+        )
         try:
             await _get_redis().setex(
                 f"hitl:{decision_id}", _HITL_TTL_SECONDS, pending_record
             )
             logger.info(
                 "solver_dispatch_node: cost=%.2f > threshold=%.2f → decision_id=%s stored in Redis",
-                cost, threshold, decision_id,
+                cost,
+                threshold,
+                decision_id,
             )
         except Exception as redis_exc:
-            logger.warning("Redis store failed for decision_id=%s: %s", decision_id, redis_exc)
+            logger.warning(
+                "Redis store failed for decision_id=%s: %s", decision_id, redis_exc
+            )
 
-    return {**state, "solver_output": solver_out, "human_approval_required": needs_approval, "decision_id": decision_id}
+    return {
+        **state,
+        "solver_output": solver_out,
+        "human_approval_required": needs_approval,
+        "decision_id": decision_id,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -560,7 +590,7 @@ async def run_orchestrator(query: str) -> WsResponse:
 
     try:
         graph = _get_graph()
-        final_state: AgentState = await graph.ainvoke(initial_state)  # type: ignore[union-attr]
+        final_state: AgentState = await graph.ainvoke(initial_state)  # type: ignore[attr-defined]
 
         answer = final_state.get("final_response") or "Processing complete."
         human_approval = bool(final_state.get("human_approval_required"))

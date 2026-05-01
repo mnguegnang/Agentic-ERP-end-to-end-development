@@ -119,7 +119,7 @@ async def run_baseline_chain(query: str) -> WsResponse:
         base_url=settings.llm_base_url,
         api_key=settings.github_token,  # type: ignore[arg-type]
         temperature=settings.llm_temperature,
-        max_tokens=settings.llm_max_tokens,
+        max_tokens=settings.llm_max_tokens,  # type: ignore[call-arg]
     )
     tool = _make_solve_mcnf_tool()
     llm_with_tools = llm.bind_tools([tool])
@@ -130,13 +130,13 @@ async def run_baseline_chain(query: str) -> WsResponse:
 
     for iteration in range(_MAX_ITERS):
         logger.debug("Chain iteration %d", iteration)
-        ai_msg: AIMessage = await llm_with_tools.ainvoke(messages)
+        ai_msg: AIMessage = await llm_with_tools.ainvoke(messages)  # type: ignore[assignment]
         messages.append(ai_msg)
 
         if not ai_msg.tool_calls:
             # LLM produced a plain text response — we are done.
             return WsResponse(
-                content=ai_msg.content or "(no response)",
+                content=ai_msg.content or "(no response)",  # type: ignore[arg-type]
                 tool_used=tool_used,
                 solver_result=solver_result,
             )
@@ -145,7 +145,7 @@ async def run_baseline_chain(query: str) -> WsResponse:
         for tc in ai_msg.tool_calls:
             tc_name: str = tc["name"]
             tc_args: dict = tc["args"]
-            tc_id: str = tc["id"]
+            tc_id: str = tc["id"]  # type: ignore[assignment]
             logger.info("Tool call: %s  args=%s", tc_name, tc_args)
 
             if tc_name == "solve_mcnf":
@@ -169,8 +169,8 @@ async def run_baseline_chain(query: str) -> WsResponse:
         None,
     )
     return WsResponse(
-        content=(
-            last_ai.content
+        content=(  # type: ignore[arg-type]
+            str(last_ai.content)
             if last_ai and last_ai.content
             else "Max iteration limit reached without a final response."
         ),
