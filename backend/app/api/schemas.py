@@ -35,6 +35,7 @@ class WsResponse(BaseModel):
     rag_documents: list[dict] | None = None  # populated by Stage 4 CRAG agent
     human_approval_required: bool = False  # True → frontend shows approval dialog
     decision_id: str | None = None  # UUID for the pending HiTL approval stored in Redis
+    kg_subgraph: dict | None = None  # nodes/edges for vis-network graph panel
     error: str | None = None  # error message if orchestrator raised an exception
 
 

@@ -1,37 +1,91 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
-interface UseWebSocketReturn {
-  sendMessage: (msg: string) => void
-  lastMessage: string | null
-  readyState: number
+export type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected'
+
+interface UseWebSocketOptions {
+  onMessage: (data: string) => void
 }
 
-// TODO Stage 3: add token-streaming decoder and reconnection back-off
+interface UseWebSocketReturn {
+  sendMessage: (msg: string) => void
+  connectionState: ConnectionState
+  reconnect: () => void
+}
 
-export const useWebSocket = (url: string): UseWebSocketReturn => {
+const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000] // exponential back-off
+
+export const useWebSocket = (url: string, options: UseWebSocketOptions): UseWebSocketReturn => {
   const socketRef = useRef<WebSocket | null>(null)
-  const [lastMessage, setLastMessage] = useState<string | null>(null)
-  const [readyState, setReadyState] = useState<number>(WebSocket.CONNECTING)
+  const [connectionState, setConnectionState] = useState<ConnectionState>('connecting')
+  const reconnectAttemptRef = useRef(0)
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const intentionalCloseRef = useRef(false)
+  const onMessageRef = useRef(options.onMessage)
+  onMessageRef.current = options.onMessage
 
-  useEffect(() => {
+  const clearReconnectTimer = () => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current)
+      reconnectTimerRef.current = null
+    }
+  }
+
+  const connect = useCallback(() => {
+    clearReconnectTimer()
+    if (socketRef.current && socketRef.current.readyState < WebSocket.CLOSING) {
+      socketRef.current.close()
+    }
+
+    setConnectionState(reconnectAttemptRef.current > 0 ? 'reconnecting' : 'connecting')
     const ws = new WebSocket(url)
     socketRef.current = ws
 
-    ws.onopen = () => setReadyState(WebSocket.OPEN)
-    ws.onclose = () => setReadyState(WebSocket.CLOSED)
-    ws.onerror = () => setReadyState(WebSocket.CLOSED)
-    ws.onmessage = (event: MessageEvent) => {
-      setLastMessage(typeof event.data === 'string' ? event.data : String(event.data))
+    ws.onopen = () => {
+      reconnectAttemptRef.current = 0
+      setConnectionState('connected')
     }
 
-    return () => ws.close()
+    ws.onmessage = (event: MessageEvent) => {
+      const data = typeof event.data === 'string' ? event.data : String(event.data)
+      onMessageRef.current(data)
+    }
+
+    ws.onclose = () => {
+      if (intentionalCloseRef.current) return
+      setConnectionState('reconnecting')
+      const delay = RECONNECT_DELAYS[Math.min(reconnectAttemptRef.current, RECONNECT_DELAYS.length - 1)]
+      reconnectAttemptRef.current += 1
+      reconnectTimerRef.current = setTimeout(connect, delay)
+    }
+
+    ws.onerror = () => {
+      // onclose fires after onerror; handled there
+    }
   }, [url])
+
+  useEffect(() => {
+    intentionalCloseRef.current = false
+    connect()
+    return () => {
+      intentionalCloseRef.current = true
+      clearReconnectTimer()
+      socketRef.current?.close()
+    }
+  }, [connect])
 
   const sendMessage = useCallback((msg: string) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(msg)
+    } else {
+      console.warn('WebSocket not open; message dropped:', msg)
     }
   }, [])
 
-  return { sendMessage, lastMessage, readyState }
+  const reconnect = useCallback(() => {
+    reconnectAttemptRef.current = 0
+    connect()
+  }, [connect])
+
+  return { sendMessage, connectionState, reconnect }
 }
+

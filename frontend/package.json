@@ -9,16 +9,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "vis-network": "^9.1.9",
+    "react-markdown": "^10.1.0",
+    "react-resizable-panels": "^2.1.9",
     "recharts": "^2.14.1",
-    "lucide-react": "^0.468.0"
+    "remark-gfm": "^4.0.1",
+    "vis-network": "^9.1.9"
   },
   "devDependencies": {
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.5.0",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.7.0",
     "vite": "^6.0.5"

@@ -934,7 +934,7 @@ Stage 6 is complete when **all** of the following are true:
 
 ### 6.6 Project 1 CI Pipeline (GitHub Actions)
 
-This CI pipeline lives in the `Agentic-ERP-SupplyChain-Copilot` repository. It runs on every push/PR, and on merge to `main` it builds and pushes Docker images to ACR, which is the **artifact handoff** to Project 2.
+This CI pipeline lives in the `Agentic-ERP-SupplyChain-Copilot` repository. It runs on every push/PR, and on merge to `master` it builds and pushes Docker images to ACR, which is the **artifact handoff** to Project 2.
 
 ```yaml
 # Agentic-ERP-SupplyChain-Copilot/.github/workflows/ci.yml

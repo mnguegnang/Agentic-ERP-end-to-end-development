@@ -185,7 +185,16 @@ _KEYWORD_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"bullwhip", "demand amplification"}), "bullwhip_analyze", "visibility"),
     (frozenset({"contract", "clause"}), "contract_query", "compliance"),
     (frozenset({"force majeure"}), "contract_query", "compliance"),
+    # KG traversal queries
+    (frozenset({"traverse"}), "kg_query", "visibility"),
+    (frozenset({"visualis"}), "kg_query", "visibility"),
+    (frozenset({"visualiz"}), "kg_query", "visibility"),
+    (frozenset({"supply network"}), "kg_query", "sourcing"),
+    (frozenset({"supplier network"}), "kg_query", "sourcing"),
+    (frozenset({"supply chain", "relationship"}), "kg_query", "sourcing"),
+    (frozenset({"graph", "relationship"}), "kg_query", "sourcing"),
     (frozenset({"supplier", "tier"}), "kg_query", "sourcing"),
+    (frozenset({"network", "supplier"}), "kg_query", "sourcing"),
     (frozenset({"disruption", "alternative"}), "disruption_resource", "visibility"),
 ]
 
@@ -604,6 +613,7 @@ async def run_orchestrator(query: str) -> WsResponse:
             solver_result=final_state.get("solver_output"),
             human_approval_required=human_approval,
             decision_id=final_state.get("decision_id"),
+            kg_subgraph=final_state.get("kg_subgraph"),
         )
 
     except Exception as exc:

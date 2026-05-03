@@ -273,3 +273,118 @@ Daemon re-creates all isolation chains (`DOCKER-ISOLATION-STAGE-1`, `DOCKER-ISOL
 | **Decision** | Sliding window advances by `chunk_size − overlap` (462 words); text ≤ 462 words → 1 chunk; text of exactly 512 words produces 2 chunks (full + trailing overlap) |
 | **Rationale** | Standard sliding-window chunking behavior. Test `test_exact_chunk_size_one_chunk` was renamed to `test_up_to_step_boundary_is_one_chunk` and corrected to use `CHUNK_SIZE − CHUNK_OVERLAP` words. |
 | **Status** | Active |
+
+---
+
+## Critical Bug Fixes & Improvements (Session 2026-04-19 → 2026-05-02)
+
+### CRITICAL FIX 1 — Neo4j Cypher: Parameterised Variable-Length Path Rejected
+
+| Field | Value |
+|-------|-------|
+| **File** | `backend/app/kg/queries.py` |
+| **Bug** | `MATCH path = (s)-[r*1..$max_depth]->(n)` — Neo4j 5.x does not allow parameters in variable-length relationship patterns. Query threw `SyntaxError` at runtime. |
+| **Fix** | Changed to literal `[r*1..4]`. Removed `max_depth` parameter from `_traverse()` signature and the `execute_read` call. |
+| **Status** | Fixed ✅ |
+
+### CRITICAL FIX 2 — Neo4j Cypher: NULL Contract Node Names Crash coalesce
+
+| Field | Value |
+|-------|-------|
+| **File** | `backend/app/kg/queries.py` |
+| **Bug** | `BOUND_BY` edges point to `Contract` nodes with `NULL` `.name`. `coalesce(n.name, toString(n.id))` type error — `id` is integer, coalesce expected same type. |
+| **Fix** | Changed to `coalesce(ns[i+1].name, labels(ns[i+1])[0]+'-'+toString(ns[i+1].id))` → produces e.g. `"Contract-1"`. |
+| **Status** | Fixed ✅ |
+
+### CRITICAL FIX 3 — Neo4j Cypher: Integer id Comparison Fails on toLower
+
+| Field | Value |
+|-------|-------|
+| **File** | `backend/app/kg/queries.py` |
+| **Bug** | `toLower(coalesce(s.id, ''))` — cannot coalesce integer with empty string literal. |
+| **Fix** | Changed to `toLower(toString(s.id))`. |
+| **Status** | Fixed ✅ |
+
+### CRITICAL FIX 4 — KG Agent: LLM 429 Caused Silent Empty Subgraph
+
+| Field | Value |
+|-------|-------|
+| **File** | `backend/app/agents/kg_agent.py` |
+| **Bug** | GitHub Models free tier (50 req/86 400 s) returns HTTP 429. Entity extraction returned `[]` → early return, no graph displayed. |
+| **Fix** | Added `_heuristic_extract(query)` (regex proper-noun extraction) and `_heuristic_relations(query)` (keyword-based) as 429 fallbacks. Empty entity list defaults to seed `"TQ-Electronics GmbH"`. |
+| **Status** | Fixed ✅ |
+
+### CRITICAL FIX 5 — KG Subgraph Not Passed to Frontend
+
+| Field | Value |
+|-------|-------|
+| **Files** | `backend/app/api/schemas.py`, `backend/app/agents/orchestrator.py` |
+| **Bug** | `WsResponse` had no `kg_subgraph` field. Orchestrator never included the subgraph in the WebSocket response. |
+| **Fix** | Added `kg_subgraph: dict | None = None` to `WsResponse`. Orchestrator passes `kg_subgraph=final_state.get("kg_subgraph")`. KG keyword intent rules added. |
+| **Status** | Fixed ✅ |
+
+### CRITICAL FIX 6 — Light Theme Completely Non-Functional
+
+| Field | Value |
+|-------|-------|
+| **Files** | `frontend/src/index.css`, `ChatPanel.tsx`, `SolverResults.tsx`, `GraphViewer.tsx` |
+| **Bug** | `.light-theme` class was toggled on `<html>` but zero CSS responded. All classes hardcoded dark. All content invisible in light mode. |
+| **Fix** | Added `.light-theme` CSS override block in `index.css`. Threaded `isDark` to all sub-components in ChatPanel and SolverResults. Added `LIGHT_OPTIONS` for vis-network in GraphViewer. |
+| **Status** | Fixed ✅ |
+
+---
+
+## UI/UX Improvements Implemented
+
+| # | Feature | Files | Description |
+|---|---------|-------|-------------|
+| 1 | **Dark/Light Theme Toggle** | `App.tsx`, `index.css`, `ChatPanel.tsx` | Sun/Moon button. Persisted to `localStorage`. `.light-theme` fully functional. |
+| 2 | **Message Search** | `ChatPanel.tsx` | Inline search bar, real-time substring filter. |
+| 3 | **Export Chat JSON** | `ChatPanel.tsx` | Downloads `erp-chat-YYYY-MM-DD.json` via Blob URL. |
+| 4 | **Solver History Accordion** | `SolverResults.tsx` | Up to 20 runs, "History (N)" toggle. |
+| 5 | **KG Node Click → Auto-Query** | `GraphViewer.tsx` | Clicking a graph node fires a supply-chain query for that entity. |
+| 6 | **Toast Notifications** | `App.tsx` | Bottom-centre stack, theme-aware. |
+| 7 | **Session Persistence** | `App.tsx` | Messages + history + subgraph in `localStorage`. Restored on reload. |
+| 8 | **Swagger API Link** | `ChatPanel.tsx` | "API" link opens FastAPI docs in new tab. |
+| 9 | **Markdown Rendering** | `ChatPanel.tsx` | `react-markdown` + `remark-gfm`. Dark/light prose classes via `isDark`. |
+| 10 | **Resizable Panels** | `App.tsx` | `react-resizable-panels 2.1.9`. Three drag-resize panels: KG (12–40%), Chat (≥30%), Solver (15–45%). |
+
+---
+
+## Package Additions
+
+### Frontend (`frontend/package.json`)
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `react-markdown` | `^10.1.0` | Markdown rendering in chat bubbles |
+| `remark-gfm` | `^4.0.1` | GitHub-Flavoured Markdown |
+| `react-resizable-panels` | `^2.1.9` | Draggable panel layout |
+
+---
+
+## HiTL Trigger Reference
+
+Any `mcnf_solve` where `total_cost > 10000` triggers the Human Approval gate. Examples:
+
+- *"Route 10000 units from factory A to warehouse B. Arc capacity 50000, cost_per_unit=2."* → $20,000 → HiTL
+- *"Route 100000 units from node A to node B. Arc capacity 200000, cost_per_unit=5."* → $500,000 → HiTL
+
+Threshold is `human_approval_cost_threshold: 10000` in `config.yaml`.
+
+---
+
+## E2E Verification Results (2026-05-02)
+
+| Test | Result |
+|------|--------|
+| WebSocket connection | ✅ |
+| MCNF solver (cost < $10k) | ✅ |
+| MCNF HiTL gate (cost > $10k) | ✅ |
+| Approve / Reject via REST | ✅ |
+| KG subgraph — TQ-Electronics | ✅ 4 nodes, 6 edges |
+| Contract CRAG query | ✅ |
+| Dark theme | ✅ |
+| Light theme (all content visible) | ✅ |
+| Resizable panels | ✅ |
+| Markdown rendering | ✅ |
