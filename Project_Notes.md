@@ -365,7 +365,7 @@ Daemon re-creates all isolation chains (`DOCKER-ISOLATION-STAGE-1`, `DOCKER-ISOL
 
 ## HiTL Trigger Reference
 
-Any `mcnf_solve` where `total_cost > 10000` triggers the Human Approval gate. Examples:
+Any `mcnf_solve` where `total_cost > 10000` triggers the Human Approval gate e.g.,:
 
 - *"Route 10000 units from factory A to warehouse B. Arc capacity 50000, cost_per_unit=2."* → $20,000 → HiTL
 - *"Route 100000 units from node A to node B. Arc capacity 200000, cost_per_unit=5."* → $500,000 → HiTL
