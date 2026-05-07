@@ -389,13 +389,15 @@ async def main() -> None:
 
     try:
         # Fetch contract records seeded by seed_adventureworks.py
-        rows = await conn.fetch("""
+        rows = await conn.fetch(
+            """
             SELECT c.contract_id, c.contract_pdf_path, c.effective_date, c.expiry_date,
                    v.name AS supplier_name, v.account_number
             FROM supply_chain.contracts c
             JOIN purchasing.vendor v ON v.business_entity_id = c.supplier_id
             ORDER BY c.contract_id
-            """)
+            """
+        )
         if not rows:
             raise RuntimeError(
                 "No contracts found in supply_chain.contracts. "
