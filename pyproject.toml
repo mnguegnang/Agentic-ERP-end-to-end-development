@@ -63,7 +63,7 @@ dev = [
     "httpx==0.28.1",
     "ruff>=0.8.0",
     "mypy>=1.13.0",
-    "black>=24.0.0",
+    "black==26.3.1",
     "bandit[toml]>=1.8.0",
 ]
 
@@ -79,6 +79,13 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["backend/tests"]
 pythonpath = ["backend"]  # exposes app.* and scripts.* packages
+
+# ------------------------------------------------------------------------------
+# black (formatter)
+# ------------------------------------------------------------------------------
+[tool.black]
+line-length = 100
+target-version = ["py311"]
 
 # ------------------------------------------------------------------------------
 # ruff (linter + formatter)

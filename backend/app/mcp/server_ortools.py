@@ -17,9 +17,7 @@ mcp = FastMCP("mcp-solver-ortools")
 
 
 @mcp.tool()
-async def tool_solve_mcnf(
-    nodes: list[str], arcs: list[dict], commodities: list[dict]
-) -> dict:
+async def tool_solve_mcnf(nodes: list[str], arcs: list[dict], commodities: list[dict]) -> dict:
     """Min-cost network flow via OR-Tools GLOP."""
     return solve_mcnf(nodes, arcs, commodities)
 

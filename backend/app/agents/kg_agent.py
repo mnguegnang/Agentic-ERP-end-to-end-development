@@ -91,13 +91,15 @@ def _heuristic_extract(query: str) -> EntityExtractionResult:
     """
     # Remove common stop-word phrases before extraction
     cleaned = re.sub(
-        r'\b(show|me|the|for|of|in|all|relationships?|connections?|network|'
-        r'supply chain|subgraph|graph|traverse|visuali[sz]e?|and|or|with|'
-        r'across|from|to|about|using|how|what|who|where|why|when)\b',
-        ' ', query, flags=re.IGNORECASE
+        r"\b(show|me|the|for|of|in|all|relationships?|connections?|network|"
+        r"supply chain|subgraph|graph|traverse|visuali[sz]e?|and|or|with|"
+        r"across|from|to|about|using|how|what|who|where|why|when)\b",
+        " ",
+        query,
+        flags=re.IGNORECASE,
     )
     # Match capitalized proper-noun sequences (1–5 words)
-    pattern = r'(?:[A-Z][A-Za-z0-9\-]+(?:\s+[A-Z][A-Za-z0-9\-]+){0,4})'
+    pattern = r"(?:[A-Z][A-Za-z0-9\-]+(?:\s+[A-Z][A-Za-z0-9\-]+){0,4})"
     matches = re.findall(pattern, cleaned)
     # Deduplicate while preserving order; drop very short generic tokens
     seen: set[str] = set()
@@ -241,8 +243,10 @@ async def kg_agent_node(state: AgentState) -> AgentState:
                 "label": from_name,
                 "group": from_label,
                 "title": f"{from_label}: {from_name}",
-                "color": {"background": label_color.get(from_label, "#1e293b"),
-                          "border": "#3b82f6"},
+                "color": {
+                    "background": label_color.get(from_label, "#1e293b"),
+                    "border": "#3b82f6",
+                },
             }
         if to_name not in nodes_seen:
             nodes_seen[to_name] = {
@@ -250,15 +254,19 @@ async def kg_agent_node(state: AgentState) -> AgentState:
                 "label": to_name,
                 "group": to_label,
                 "title": f"{to_label}: {to_name}",
-                "color": {"background": label_color.get(to_label, "#1e293b"),
-                          "border": "#3b82f6"},
+                "color": {
+                    "background": label_color.get(to_label, "#1e293b"),
+                    "border": "#3b82f6",
+                },
             }
-        edges.append({
-            "from": from_name,
-            "to": to_name,
-            "label": rel_type,
-            "arrows": "to",
-        })
+        edges.append(
+            {
+                "from": from_name,
+                "to": to_name,
+                "label": rel_type,
+                "arrows": "to",
+            }
+        )
 
     subgraph: dict = {
         "nodes": list(nodes_seen.values()),

@@ -61,18 +61,14 @@ def fetch_langsmith_runs(
     try:
         from langsmith import Client  # type: ignore[import-untyped]
     except ImportError as e:
-        raise ImportError(
-            "langsmith not installed. Run: pip install langsmith==0.2.10"
-        ) from e
+        raise ImportError("langsmith not installed. Run: pip install langsmith==0.2.10") from e
 
     api_key = langsmith_api_key or os.environ.get("LANGCHAIN_API_KEY")
     if not api_key:
         raise ValueError("LANGCHAIN_API_KEY environment variable not set.")
 
     client = Client(api_key=api_key)
-    logger.info(
-        "Fetching runs from LangSmith project %r (target: %d)...", project, min_runs
-    )
+    logger.info("Fetching runs from LangSmith project %r (target: %d)...", project, min_runs)
 
     runs = list(
         client.list_runs(
@@ -200,9 +196,7 @@ def save_dataset(pairs: list[dict[str, str]], output_path: str) -> None:
     try:
         from datasets import Dataset  # type: ignore[import-untyped]
     except ImportError as e:
-        raise ImportError(
-            "datasets not installed. Run: pip install datasets==3.2.0"
-        ) from e
+        raise ImportError("datasets not installed. Run: pip install datasets==3.2.0") from e
 
     import os
 
@@ -322,9 +316,7 @@ def main() -> None:
         pairs = _synthetic_pairs(args.min_pairs)
         logger.info("Generated %d synthetic pairs.", len(pairs))
         save_dataset(pairs, args.output)
-        logger.info(
-            "Synthetic dataset saved to %s. Ready for train_dpo.py.", args.output
-        )
+        logger.info("Synthetic dataset saved to %s. Ready for train_dpo.py.", args.output)
         return
 
     if args.dry_run:

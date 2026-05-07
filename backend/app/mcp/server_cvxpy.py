@@ -15,9 +15,7 @@ mcp = FastMCP("mcp-solver-cvxpy")
 
 
 @mcp.tool()
-async def tool_solve_robust_minmax(
-    suppliers: list[dict], demand: float, omega: float
-) -> dict:
+async def tool_solve_robust_minmax(suppliers: list[dict], demand: float, omega: float) -> dict:
     """Robust min-max supplier allocation via CVXPY SOCP."""
     return solve_robust_minmax(suppliers, demand, omega)
 

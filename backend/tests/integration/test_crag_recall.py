@@ -237,8 +237,7 @@ async def test_crag_recall_at_5_per_query(tc: CRAGTestCase) -> None:
             new=AsyncMock(
                 side_effect=lambda q, doc: (
                     "correct"
-                    if tc.expected_section_keyword.lower()
-                    in (doc.get("text") or "").lower()
+                    if tc.expected_section_keyword.lower() in (doc.get("text") or "").lower()
                     else "ambiguous"
                 )
             ),

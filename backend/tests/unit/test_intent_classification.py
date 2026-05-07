@@ -91,9 +91,7 @@ def test_route_by_intent_solver_direct_set_is_complete() -> None:
     }
     for intent in solver_intents:
         state = _make_state(intent)
-        assert (
-            route_by_intent(state) == "or_solve"
-        ), f"{intent} should route to or_solve"
+        assert route_by_intent(state) == "or_solve", f"{intent} should route to or_solve"
 
 
 # ---------------------------------------------------------------------------

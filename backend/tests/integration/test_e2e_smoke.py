@@ -201,18 +201,14 @@ def _patch_all(
         patch(
             "app.kg.client.execute_read",
             new=AsyncMock(
-                return_value=(
-                    kg_subgraph if kg_subgraph is not None else _mock_kg_subgraph()
-                )
+                return_value=(kg_subgraph if kg_subgraph is not None else _mock_kg_subgraph())
             ),
         ),
         # Patch at the import site in contract_agent (not at retriever module level)
         patch(
             "app.agents.contract_agent.retrieve_and_evaluate",
             new=AsyncMock(
-                return_value=(
-                    crag_result if crag_result is not None else _mock_crag_result()
-                )
+                return_value=(crag_result if crag_result is not None else _mock_crag_result())
             ),
         ),
         patch("app.agents.contract_agent.get_settings", return_value=s),
@@ -272,9 +268,7 @@ class TestKgQueryPath:
             result = await run_orchestrator("Which warehouses store Component X?")
 
         # solver_output should record no_solver_needed for kg_query intent
-        assert (
-            result.solver_result is not None or result.solver_result is None
-        )  # present in state
+        assert result.solver_result is not None or result.solver_result is None  # present in state
         assert result.intent == "kg_query"
 
     @pytest.mark.asyncio
@@ -319,9 +313,7 @@ class TestContractQueryPath:
         with contextlib.ExitStack() as stack:
             for p in _patch_all(orchestrator_llm=o_llm, crag_result=crag):
                 stack.enter_context(p)
-            result = await run_orchestrator(
-                "Find force majeure clauses in Supplier A's contract."
-            )
+            result = await run_orchestrator("Find force majeure clauses in Supplier A's contract.")
 
         assert isinstance(result, WsResponse)
         assert result.intent == "contract_query"
@@ -426,9 +418,7 @@ class TestMcnfSolveHighCostPath:
         with contextlib.ExitStack() as stack:
             for p in _patch_all(orchestrator_llm=o_llm, settings=settings):
                 stack.enter_context(p)
-            result = await run_orchestrator(
-                "Route 50 units at high cost — requires approval."
-            )
+            result = await run_orchestrator("Route 50 units at high cost — requires approval.")
 
         assert isinstance(result, WsResponse)
         # With threshold=0.01 any non-zero total_cost triggers the gate.
@@ -449,9 +439,7 @@ class TestMcnfSolveHighCostPath:
             "final_response": None,
             "error": None,
         }
-        with patch(
-            "app.agents.orchestrator.get_settings", return_value=_mock_settings()
-        ):
+        with patch("app.agents.orchestrator.get_settings", return_value=_mock_settings()):
             result = await human_approval_gate(state)  # type: ignore[arg-type]
 
         # flag should remain True since it was pre-set
@@ -488,9 +476,7 @@ class TestRunOrchestratorPublicApi:
         with contextlib.ExitStack() as stack:
             for p in _patch_all(orchestrator_llm=o_llm):
                 stack.enter_context(p)
-            result = await run_orchestrator(
-                "Find contracts with delivery penalty clauses."
-            )
+            result = await run_orchestrator("Find contracts with delivery penalty clauses.")
 
         assert isinstance(result, WsResponse)
         assert result.role == "assistant"
@@ -520,27 +506,15 @@ class TestRunOrchestratorPublicApi:
 
         s = _mock_settings()
         with contextlib.ExitStack() as stack:
-            stack.enter_context(
-                patch("app.agents.orchestrator.get_settings", return_value=s)
-            )
-            stack.enter_context(
-                patch("app.agents.kg_agent.get_settings", return_value=s)
-            )
-            stack.enter_context(
-                patch("app.agents.orchestrator._make_llm", return_value=broken_llm)
-            )
-            stack.enter_context(
-                patch("app.agents.kg_agent._make_llm", return_value=broken_llm)
-            )
-            stack.enter_context(
-                patch("app.kg.client.execute_read", new=AsyncMock(return_value=[]))
-            )
+            stack.enter_context(patch("app.agents.orchestrator.get_settings", return_value=s))
+            stack.enter_context(patch("app.agents.kg_agent.get_settings", return_value=s))
+            stack.enter_context(patch("app.agents.orchestrator._make_llm", return_value=broken_llm))
+            stack.enter_context(patch("app.agents.kg_agent._make_llm", return_value=broken_llm))
+            stack.enter_context(patch("app.kg.client.execute_read", new=AsyncMock(return_value=[])))
             stack.enter_context(
                 patch(
                     "app.rag.retriever.retrieve_and_evaluate",
-                    new=AsyncMock(
-                        return_value=CRAGResult(documents=[], evaluation="incorrect")
-                    ),
+                    new=AsyncMock(return_value=CRAGResult(documents=[], evaluation="incorrect")),
                 )
             )
             result = await run_orchestrator("This will fail at the LLM.")
@@ -652,9 +626,7 @@ class TestEdgeCases:
         with contextlib.ExitStack() as stack:
             for p in _patch_all(orchestrator_llm=o_llm):
                 stack.enter_context(p)
-            result = await run_orchestrator(
-                "Optimise last-mile delivery routes for 10 vehicles."
-            )
+            result = await run_orchestrator("Optimise last-mile delivery routes for 10 vehicles.")
 
         assert isinstance(result, WsResponse)
         assert result.intent == "vrp_route"

@@ -152,9 +152,7 @@ async def classify_intent(state: AgentState) -> AgentState:
             "ddd_context": result.ddd_context,
         }
     except Exception as exc:
-        logger.warning(
-            "classify_intent failed: %s — falling back to keyword classifier", exc
-        )
+        logger.warning("classify_intent failed: %s — falling back to keyword classifier", exc)
         intent, confidence, ddd = _keyword_classify(query)
         s = get_settings()
         if confidence < s.intent_confidence_threshold:
@@ -277,9 +275,7 @@ def _regex_extract_mcnf_params(query: str) -> SolveMcnfInput | None:
             node_ids = [m.group(1).strip(), m.group(2).strip()]
 
     if len(node_ids) < 2:
-        logger.warning(
-            "regex_extract_mcnf_params: could not parse 2 node IDs from query"
-        )
+        logger.warning("regex_extract_mcnf_params: could not parse 2 node IDs from query")
         return None
 
     src, snk = node_ids[0], node_ids[1]
@@ -347,9 +343,7 @@ async def solver_dispatch_node(state: AgentState) -> AgentState:
             solver_out = solve_jsp(jobs=[])
 
         elif intent == "vrp_route":
-            solver_out = solve_vrp(
-                depot=0, locations=[], vehicle_capacity=1000, num_vehicles=1
-            )
+            solver_out = solve_vrp(depot=0, locations=[], vehicle_capacity=1000, num_vehicles=1)
 
         elif intent == "robust_allocate":
             solver_out = solve_robust_minmax(suppliers=[], demand=0.0, omega=1.0)
@@ -363,9 +357,7 @@ async def solver_dispatch_node(state: AgentState) -> AgentState:
             )
 
         elif intent == "disruption_resource":
-            solver_out = solve_disruption(
-                affected_components=[], alt_suppliers=[], demands=[]
-            )
+            solver_out = solve_disruption(affected_components=[], alt_suppliers=[], demands=[])
 
         else:
             # Fallback: kg_agent already populated kg_subgraph; nothing to dispatch
@@ -398,9 +390,7 @@ async def solver_dispatch_node(state: AgentState) -> AgentState:
             }
         )
         try:
-            await _get_redis().setex(
-                f"hitl:{decision_id}", _HITL_TTL_SECONDS, pending_record
-            )
+            await _get_redis().setex(f"hitl:{decision_id}", _HITL_TTL_SECONDS, pending_record)
             logger.info(
                 "solver_dispatch_node: cost=%.2f > threshold=%.2f → decision_id=%s stored in Redis",
                 cost,
@@ -408,9 +398,7 @@ async def solver_dispatch_node(state: AgentState) -> AgentState:
                 decision_id,
             )
         except Exception as redis_exc:
-            logger.warning(
-                "Redis store failed for decision_id=%s: %s", decision_id, redis_exc
-            )
+            logger.warning("Redis store failed for decision_id=%s: %s", decision_id, redis_exc)
 
     return {
         **state,
@@ -465,9 +453,7 @@ async def synthesize_response(state: AgentState) -> AgentState:
 
     solver_out = state.get("solver_output")
     if solver_out:
-        context_parts.append(
-            f"Solver result: {json.dumps(solver_out, default=str)[:800]}"
-        )
+        context_parts.append(f"Solver result: {json.dumps(solver_out, default=str)[:800]}")
 
     rag_docs = state.get("rag_documents")
     rag_eval = state.get("rag_evaluation")
@@ -476,9 +462,7 @@ async def synthesize_response(state: AgentState) -> AgentState:
         context_parts.append(f"Contract excerpt (relevance={rag_eval}): {top_chunk}")
 
     if state.get("human_approval_required"):
-        context_parts.append(
-            "NOTE: This action requires human approval due to high cost impact."
-        )
+        context_parts.append("NOTE: This action requires human approval due to high cost impact.")
 
     context = "\n\n".join(context_parts)
 

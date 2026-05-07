@@ -162,9 +162,7 @@ async def _seed_distribution_centers(session, dc_ids: list[int]) -> None:
     logger.info("Seeded %d DistributionCenter nodes.", len(DISTRIBUTION_CENTERS))
 
 
-async def _seed_contracts(
-    session, contract_ids: list[int], supplier_ids: list[int]
-) -> None:
+async def _seed_contracts(session, contract_ids: list[int], supplier_ids: list[int]) -> None:
     """Merge (:Contract) nodes and (:Supplier)-[:BOUND_BY]->(:Contract)."""
     for i, (sup_idx, eff, exp) in enumerate(CONTRACT_DEFS):
         cid = contract_ids[i]
@@ -263,9 +261,7 @@ async def _seed_relationships(
     # All products ship to all three DCs
     for prod_idx in range(len(PRODUCTS)):
         pid = product_ids[prod_idx]
-        for dc_idx, (transit_days, cost) in enumerate(
-            [(3, 0.20), (7, 0.55), (14, 0.80)], start=1
-        ):
+        for dc_idx, (transit_days, cost) in enumerate([(3, 0.20), (7, 0.55), (14, 0.80)], start=1):
             await session.run(
                 """
                 MATCH (p:Product {id: $prod_id})
@@ -287,9 +283,7 @@ async def _seed_relationships(
 # ---------------------------------------------------------------------------
 
 
-async def _fetch_pg_ids() -> (
-    tuple[list[int], list[int], list[int], list[int], list[int]]
-):
+async def _fetch_pg_ids() -> tuple[list[int], list[int], list[int], list[int], list[int]]:
     """Return (supplier_ids, component_ids, product_ids, dc_ids, contract_ids)."""
     import asyncpg
 
@@ -343,9 +337,7 @@ async def main() -> None:
     """Seed Neo4j KG. Requires seed_adventureworks.py to have run first."""
     settings = get_settings()
     logger.info("Fetching IDs from PostgreSQL…")
-    supplier_ids, component_ids, product_ids, dc_ids, contract_ids = (
-        await _fetch_pg_ids()
-    )
+    supplier_ids, component_ids, product_ids, dc_ids, contract_ids = await _fetch_pg_ids()
 
     if len(supplier_ids) != len(SUPPLIERS):
         msg = (
@@ -355,9 +347,7 @@ async def main() -> None:
         raise RuntimeError(msg)
 
     logger.info("Connecting to Neo4j at %s…", settings.neo4j_uri)
-    driver = AsyncGraphDatabase.driver(
-        settings.neo4j_uri, auth=("neo4j", settings.neo4j_password)
-    )
+    driver = AsyncGraphDatabase.driver(settings.neo4j_uri, auth=("neo4j", settings.neo4j_password))
     try:
         async with driver.session() as session:
             await _create_constraints(session)
@@ -383,7 +373,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO, format="%(levelname)s %(name)s — %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s — %(message)s")
     asyncio.run(main())

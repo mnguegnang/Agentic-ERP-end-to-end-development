@@ -183,9 +183,7 @@ async def test_sql_injection_via_nl_query(query: str, label: str) -> None:
         response = await run_orchestrator(query)
 
     # Must be a valid WsResponse — not a raw SQL exception
-    assert isinstance(
-        response, WsResponse
-    ), f"[{label}] Did not return WsResponse: {response}"
+    assert isinstance(response, WsResponse), f"[{label}] Did not return WsResponse: {response}"
     # No SQL error strings should appear in the response
     sql_error_patterns = [
         "syntax error",
@@ -286,9 +284,7 @@ async def test_cypher_injection_via_nl_query(query: str, label: str) -> None:
     ):
         response = await run_orchestrator(query)
 
-    assert isinstance(
-        response, WsResponse
-    ), f"[{label}] Did not return WsResponse: {response}"
+    assert isinstance(response, WsResponse), f"[{label}] Did not return WsResponse: {response}"
     # If neo4j_execute_mock was called, verify it was NOT called with raw user input
     for call in neo4j_execute_mock.call_args_list:
         cypher_arg = call.args[0] if call.args else ""

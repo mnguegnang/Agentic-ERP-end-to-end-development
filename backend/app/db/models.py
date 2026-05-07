@@ -68,9 +68,7 @@ class BillOfMaterials(Base):
 
     bill_of_materials_id = Column(Integer, primary_key=True, autoincrement=True)
     product_assembly_id = Column(Integer, ForeignKey("production.product.product_id"))
-    component_id = Column(
-        Integer, ForeignKey("production.product.product_id"), nullable=False
-    )
+    component_id = Column(Integer, ForeignKey("production.product.product_id"), nullable=False)
     unit_measure_code = Column(String(3), nullable=False, default="EA ")
     bom_level = Column(Integer, nullable=False, default=1)
     per_assembly_qty = Column(Numeric(8, 2), nullable=False, default=1.0)
@@ -118,9 +116,7 @@ class SupplierTier(Base):
         Integer, ForeignKey("purchasing.vendor.business_entity_id"), nullable=False
     )
     tier_level = Column(Integer, nullable=False)
-    parent_supplier_id = Column(
-        Integer, ForeignKey("purchasing.vendor.business_entity_id")
-    )
+    parent_supplier_id = Column(Integer, ForeignKey("purchasing.vendor.business_entity_id"))
     reliability_score = Column(Numeric(3, 2))
     lead_time_days = Column(Integer, nullable=False)
     country_code = Column(String(2), nullable=False)

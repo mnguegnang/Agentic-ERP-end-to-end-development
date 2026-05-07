@@ -41,9 +41,7 @@ async def query_erp(query_type: str, filters: dict) -> dict:
                 if filters.get("name"):
                     stmt = stmt.where(Vendor.name.ilike(f"%{filters['name']}%"))
                 if filters.get("active_flag") is not None:
-                    stmt = stmt.where(
-                        Vendor.active_flag == bool(filters["active_flag"])
-                    )
+                    stmt = stmt.where(Vendor.active_flag == bool(filters["active_flag"]))
                 rows = (await session.execute(stmt)).scalars().all()
                 return {
                     "results": [
@@ -75,8 +73,7 @@ async def query_erp(query_type: str, filters: dict) -> dict:
 
             # distribution_centers — plain select
             dc_sql = (
-                "SELECT dc_id, name, region, country_code"
-                " FROM supply_chain.distribution_centers"
+                "SELECT dc_id, name, region, country_code" " FROM supply_chain.distribution_centers"
             )
             result = await session.execute(text(dc_sql))
             return {"results": [dict(r._mapping) for r in result]}
@@ -117,7 +114,5 @@ async def get_product_bom(product_id: int) -> dict:
                 "count": len(bom_items),
             }
     except Exception as exc:
-        logger.exception(
-            "get_product_bom failed for product_id=%s: %s", product_id, exc
-        )
+        logger.exception("get_product_bom failed for product_id=%s: %s", product_id, exc)
         return {"error": str(exc)}

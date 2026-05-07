@@ -77,9 +77,7 @@ class SolveMcnfInput(BaseModel):
         * commodities — at least 1 source/sink demand pair
     """
 
-    nodes: list[str] = Field(
-        ..., min_length=2, description="All node IDs in the network"
-    )
+    nodes: list[str] = Field(..., min_length=2, description="All node IDs in the network")
     arcs: list[Arc] = Field(
         ..., min_length=1, description="Network arcs with capacity and unit cost"
     )
@@ -123,16 +121,12 @@ class IntentClassification(BaseModel):
             "contract_query, multi_step"
         ),
     )
-    intent_confidence: float = Field(
-        ..., ge=0.0, le=1.0, description="Confidence score 0.0–1.0"
-    )
+    intent_confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score 0.0–1.0")
     ddd_context: str = Field(
         ...,
         description="DDD bounded context: 'visibility' | 'inventory' | 'compliance'",
     )
-    reasoning: str = Field(
-        ..., description="One-sentence reasoning for the classification"
-    )
+    reasoning: str = Field(..., description="One-sentence reasoning for the classification")
 
 
 class EntityExtractionResult(BaseModel):
@@ -160,6 +154,4 @@ class RelationSelectionResult(BaseModel):
             "Valid types: PROVIDES, USED_IN, PROCESSED_AT, SHIPS_TO, BOUND_BY, SUPPLIED_BY"
         ),
     )
-    reasoning: str = Field(
-        ..., description="One-sentence reasoning for the chosen traversal path"
-    )
+    reasoning: str = Field(..., description="One-sentence reasoning for the chosen traversal path")

@@ -651,9 +651,7 @@ LABELLED_DATASET: list[LabelledQuery] = [
     ),
 ]
 
-assert (
-    len(LABELLED_DATASET) == 100
-), f"Expected 100 queries, got {len(LABELLED_DATASET)}"
+assert len(LABELLED_DATASET) == 100, f"Expected 100 queries, got {len(LABELLED_DATASET)}"
 
 # ---------------------------------------------------------------------------
 # Tool precision map — which tool should be called for each intent
@@ -742,10 +740,7 @@ def test_route_by_intent_labelled_dataset(sample: LabelledQuery) -> None:
 @pytest.mark.parametrize(
     "sample",
     LABELLED_DATASET,
-    ids=[
-        f"classify-{s.expected_intent[:6]}-{i:03d}"
-        for i, s in enumerate(LABELLED_DATASET)
-    ],
+    ids=[f"classify-{s.expected_intent[:6]}-{i:03d}" for i, s in enumerate(LABELLED_DATASET)],
 )
 async def test_classify_intent_propagates_to_state(sample: LabelledQuery) -> None:
     """classify_intent() must write expected intent+confidence into AgentState."""

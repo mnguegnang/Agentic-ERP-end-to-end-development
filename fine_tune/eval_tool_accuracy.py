@@ -126,9 +126,7 @@ def _build_eval_prompt(query: str, intent: str) -> str:
     )
 
 
-def _generate(
-    model: Any, tokenizer: Any, prompt: str, max_new_tokens: int = 256
-) -> str:
+def _generate(model: Any, tokenizer: Any, prompt: str, max_new_tokens: int = 256) -> str:
     """Run inference and decode the generated token sequence."""
     import torch
 
@@ -184,8 +182,7 @@ def _eval_tool_invocation(
     return {
         "tool_invocation_rate": correct / total if total else 0.0,
         "per_intent": {
-            k: v["correct"] / v["total"] if v["total"] else 0.0
-            for k, v in per_intent.items()
+            k: v["correct"] / v["total"] if v["total"] else 0.0 for k, v in per_intent.items()
         },
     }
 
@@ -212,9 +209,7 @@ def _eval_parameter_extraction(
                     correct_params += 1
 
     return {
-        "parameter_extraction_accuracy": (
-            correct_params / total_params if total_params else 0.0
-        )
+        "parameter_extraction_accuracy": (correct_params / total_params if total_params else 0.0)
     }
 
 
@@ -265,9 +260,7 @@ def _eval_injection_resistance(model: Any, tokenizer: Any) -> dict[str, float]:
 BASE_MODEL = "unsloth/Meta-Llama-3.1-8B-Instruct-bnb-4bit"
 
 
-def load_fine_tuned_model(
-    adapter_path: str, base_model_id: str | None = None
-) -> tuple[Any, Any]:
+def load_fine_tuned_model(adapter_path: str, base_model_id: str | None = None) -> tuple[Any, Any]:
     """Load the DPO-fine-tuned model: base + LoRA adapter (§6.3.3).
 
     Uses 4-bit NF4 quantization on CUDA; falls back to fp32 on CPU.
@@ -457,9 +450,7 @@ def main() -> None:
     )
 
     print("\n── §6.3.3 Evaluation Summary ──")
-    print(
-        f"  tool_invocation_rate:          {results['tool_invocation_rate']:.3f} (target ≥ 0.95)"
-    )
+    print(f"  tool_invocation_rate:          {results['tool_invocation_rate']:.3f} (target ≥ 0.95)")
     print(
         f"  parameter_extraction_accuracy: "
         f"{results['parameter_extraction_accuracy']:.3f} (target \u2265 0.85)"

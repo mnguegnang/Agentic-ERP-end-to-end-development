@@ -80,9 +80,7 @@ async def test_retrieve_and_evaluate_correct_evaluation() -> None:
         patch("app.rag.retriever.get_settings") as mock_s,
         patch("app.rag.retriever._get_embedder") as mock_emb,
         patch("app.rag.retriever._pgvector_search", AsyncMock(return_value=docs)),
-        patch(
-            "app.rag.retriever._load_bm25_corpus", AsyncMock(return_value=([], None))
-        ),
+        patch("app.rag.retriever._load_bm25_corpus", AsyncMock(return_value=([], None))),
         patch("app.rag.retriever.rerank", return_value=docs),
         patch("app.rag.retriever.evaluate_relevance", AsyncMock(return_value=CORRECT)),
     ):
@@ -104,9 +102,7 @@ async def test_retrieve_and_evaluate_no_results_returns_incorrect() -> None:
         patch("app.rag.retriever.get_settings") as mock_s,
         patch("app.rag.retriever._get_embedder") as mock_emb,
         patch("app.rag.retriever._pgvector_search", AsyncMock(return_value=[])),
-        patch(
-            "app.rag.retriever._load_bm25_corpus", AsyncMock(return_value=([], None))
-        ),
+        patch("app.rag.retriever._load_bm25_corpus", AsyncMock(return_value=([], None))),
         patch("app.rag.retriever.rerank", return_value=[]),
     ):
         _patch_settings_rr(mock_s)
@@ -180,9 +176,7 @@ async def test_evaluate_relevance_llm_label_propagated(label: str) -> None:
         mock_llm.with_structured_output.return_value = mock_structured
         mock_llm_cls.return_value = mock_llm
 
-        result = await evaluate_relevance(
-            "query", top_doc={"chunk_text": "relevant text"}
-        )
+        result = await evaluate_relevance("query", top_doc={"chunk_text": "relevant text"})
 
     assert result == label
 

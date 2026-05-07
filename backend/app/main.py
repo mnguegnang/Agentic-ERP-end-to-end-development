@@ -30,4 +30,3 @@ app.include_router(approve_router)
 @app.get("/", include_in_schema=False)
 async def root() -> RedirectResponse:
     return RedirectResponse(url="/docs")
-

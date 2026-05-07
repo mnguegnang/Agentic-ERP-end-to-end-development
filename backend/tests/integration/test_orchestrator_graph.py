@@ -163,9 +163,7 @@ async def test_run_orchestrator_mcnf_path_returns_ws_response() -> None:
     with (
         patch("app.agents.orchestrator.get_settings") as mock_s,
         patch("app.agents.orchestrator.ChatOpenAI") as mock_llm_cls,
-        patch(
-            "app.agents.orchestrator._extract_mcnf_params", AsyncMock(return_value=None)
-        ),
+        patch("app.agents.orchestrator._extract_mcnf_params", AsyncMock(return_value=None)),
         patch(
             "app.agents.orchestrator.kg_agent_node",
             AsyncMock(side_effect=lambda s: {**s, "kg_subgraph": {}}),

@@ -33,9 +33,7 @@ router = APIRouter(prefix="/api/approve", tags=["approval"])
 
 class ApprovalRequest(BaseModel):
     approved: bool = Field(..., description="True = approve, False = reject")
-    approved_by: str = Field(
-        default="supply-chain-manager", description="Approver identifier"
-    )
+    approved_by: str = Field(default="supply-chain-manager", description="Approver identifier")
     reason: str | None = Field(default=None, description="Optional reason / comment")
 
 
@@ -83,9 +81,7 @@ async def _load_record(decision_id: str) -> dict:
     try:
         return json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise HTTPException(
-            status_code=500, detail=f"Corrupt record in Redis: {exc}"
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"Corrupt record in Redis: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------
@@ -93,9 +89,7 @@ async def _load_record(decision_id: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@router.get(
-    "/{decision_id}", response_model=ApprovalRecord, summary="Check decision status"
-)
+@router.get("/{decision_id}", response_model=ApprovalRecord, summary="Check decision status")
 async def get_approval_status(decision_id: str) -> ApprovalRecord:
     """Return the current status of a pending HiTL decision."""
     record = await _load_record(decision_id)

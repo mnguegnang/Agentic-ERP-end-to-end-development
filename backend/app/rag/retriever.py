@@ -132,8 +132,7 @@ async def _load_bm25_corpus(
             )
         else:
             rows = await conn.fetch(
-                "SELECT id, chunk_text, contract_id, supplier_id "
-                "FROM contract_chunks"
+                "SELECT id, chunk_text, contract_id, supplier_id " "FROM contract_chunks"
             )
         await conn.close()
         meta = [dict(r) for r in rows]
@@ -173,23 +172,17 @@ async def retrieve_and_evaluate(
     # 1. Embed query
     try:
         embedder = _get_embedder()
-        query_vec: list[float] = embedder.encode(
-            query, normalize_embeddings=True
-        ).tolist()
+        query_vec: list[float] = embedder.encode(query, normalize_embeddings=True).tolist()
     except Exception as exc:
         logger.warning("Embedding failed: %s", exc)
-        return CRAGResult(
-            documents=[], evaluation=INCORRECT, fallback="embedding_error"
-        )
+        return CRAGResult(documents=[], evaluation=INCORRECT, fallback="embedding_error")
 
     # 2. Dense (pgvector) + sparse (BM25) in parallel via asyncio.gather
     import asyncio
 
     dense_task = _pgvector_search(query_vec, supplier_id, dense_k, s.database_url)
     corpus_task = _load_bm25_corpus(supplier_id, s.database_url)
-    dense_results, (bm25_meta, bm25_index) = await asyncio.gather(
-        dense_task, corpus_task
-    )
+    dense_results, (bm25_meta, bm25_index) = await asyncio.gather(dense_task, corpus_task)
 
     # 3. BM25 sparse search
     sparse_results: list[dict] = []

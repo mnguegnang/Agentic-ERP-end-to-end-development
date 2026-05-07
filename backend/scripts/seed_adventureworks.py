@@ -217,9 +217,7 @@ async def main() -> None:
                     sup["account_number"],
                 )
                 vendor_ids.append(row["business_entity_id"])
-                logger.debug(
-                    "Vendor %s already exists — skipping", sup["account_number"]
-                )
+                logger.debug("Vendor %s already exists — skipping", sup["account_number"])
             else:
                 vid = await conn.fetchval(
                     """
@@ -245,9 +243,7 @@ async def main() -> None:
             )
             if exists:
                 continue
-            parent_vid = (
-                vendor_ids[sup["parent_idx"]] if sup["parent_idx"] is not None else None
-            )
+            parent_vid = vendor_ids[sup["parent_idx"]] if sup["parent_idx"] is not None else None
             await conn.execute(
                 """
                 INSERT INTO supply_chain.supplier_tiers
@@ -467,7 +463,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO, format="%(levelname)s %(name)s — %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s — %(message)s")
     asyncio.run(main())
