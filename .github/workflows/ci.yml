@@ -276,6 +276,7 @@ jobs:
             --tag ${{ steps.tags.outputs.frontend_latest }} \
             --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
             --build-arg GIT_SHA=${{ steps.tags.outputs.short_sha }} \
+            --build-arg VITE_WS_BASE_URL=ws://erp.131-189-252-158.nip.io \
             --cache-from ${{ steps.tags.outputs.frontend_latest }} \
             .
           docker push ${{ steps.tags.outputs.frontend_tag }}

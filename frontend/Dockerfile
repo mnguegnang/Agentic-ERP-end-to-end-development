@@ -2,6 +2,8 @@ FROM node:22-alpine AS builder
 
 ARG BUILD_DATE
 ARG GIT_SHA
+ARG VITE_WS_BASE_URL=ws://erp.131-189-252-158.nip.io
+ENV VITE_WS_BASE_URL=${VITE_WS_BASE_URL}
 LABEL build_date="${BUILD_DATE}" git_sha="${GIT_SHA}"
 
 WORKDIR /app
