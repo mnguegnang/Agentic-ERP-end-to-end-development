@@ -293,7 +293,7 @@ jobs:
           path: image-metadata.json
 
   # ──────────────────────────────────────────────────────────────────────────
-  # JOB 6 — Trigger deployment workflow in Agentic-ERP-Deploy repo (§6.6)
+  # JOB 6 — Trigger deployment workflow in Agentic-ERP-Deployment repo (§6.6)
   # Fires a repository_dispatch event that initiates the deploy pipeline.
   # ──────────────────────────────────────────────────────────────────────────
   trigger-deploy:
@@ -307,7 +307,7 @@ jobs:
         with:
           name: image-metadata
 
-      - name: Dispatch deploy event to Agentic-ERP-Deploy
+      - name: Dispatch deploy event to Agentic-ERP-Deployment
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.DEPLOY_REPO_PAT }}
@@ -316,7 +316,7 @@ jobs:
             const metadata = JSON.parse(fs.readFileSync('image-metadata.json', 'utf8'));
             await github.rest.repos.createDispatchEvent({
               owner: context.repo.owner,
-              repo: 'Agentic-ERP-Deploy',
+              repo: 'Agentic-ERP-Deployment',
               event_type: 'deploy',
               client_payload: {
                 api_tag: metadata.api_tag,
