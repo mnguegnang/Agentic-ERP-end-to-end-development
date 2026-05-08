@@ -24,6 +24,7 @@ import yaml  # type: ignore[import-untyped]
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 def _find_config_yaml() -> Path:
     """Search upward from this file for config.yaml.
 
