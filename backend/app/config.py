@@ -24,15 +24,26 @@ import yaml  # type: ignore[import-untyped]
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Repo root is three levels above this file:
-#   backend/app/config.py → backend/app/ → backend/ → <repo root>
-_REPO_ROOT = Path(__file__).parents[2]
+def _find_config_yaml() -> Path:
+    """Search upward from this file for config.yaml.
+
+    Works in both local dev (backend/app/config.py → 3 levels up to repo root)
+    and Docker (WORKDIR=/app, file at /app/app/config.py → 2 levels up to /app).
+    """
+    here = Path(__file__).parent
+    for directory in [here, here.parent, here.parent.parent, here.parent.parent.parent]:
+        candidate = directory / "config.yaml"
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError(f"config.yaml not found searching upward from {here}")
+
+
+_REPO_ROOT = _find_config_yaml().parent
 
 
 def _load_yaml() -> dict:
-    """Load config.yaml from repo root. Called once per process."""
-    cfg_path = _REPO_ROOT / "config.yaml"
-    with cfg_path.open(encoding="utf-8") as fh:
+    """Load config.yaml. Called once per process."""
+    with (_REPO_ROOT / "config.yaml").open(encoding="utf-8") as fh:
         return yaml.safe_load(fh)
 
 
