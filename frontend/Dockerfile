@@ -3,6 +3,7 @@ FROM node:22-alpine AS builder
 ARG BUILD_DATE
 ARG GIT_SHA
 ARG VITE_WS_BASE_URL
+ARG VITE_API_BASE_URL
 LABEL build_date="${BUILD_DATE}" git_sha="${GIT_SHA}"
 
 WORKDIR /app
