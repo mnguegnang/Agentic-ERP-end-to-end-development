@@ -1,11 +1,10 @@
 # Agentic ERP Supply Chain Copilot
 
 > **Project 1 of 2** — Application Code, CI Pipeline, and Container Images  
-> Companion infrastructure repo: [`Agentic-ERP-Deploy`](https://github.com/Gabin-Maxime/Agentic-ERP-Deploy) (Project 2)  
+> Companion infrastructure repo: [`Agentic-ERP-Deploy`](https://github.com/mnguegnang/Agentic-ERP-Deploy) (Project 2)  
 > Deployed at: `http://erp.131-189-252-158.nip.io`
 
-A production-grade multi-agent system that answers natural-language supply-chain queries using a **LangGraph orchestrator**, seven **OR/CVXPY/SciPy solvers**, a **CRAG retrieval pipeline**, a **Neo4j knowledge graph**, and a **Human-in-the-Loop approval gate**. The full stack runs locally via Docker Compose and is deployed to **Azure Kubernetes Service** through a fully automated CI/CD pipeline.
-
+Agentic ERP Supply Chain Copilot is a production-grade multi-agent system that answers supply-chain queries in plain language. It pairs a **LangGraph orchestrator** and a **CRAG retrieval pipeline** with 7 deterministic solver backends **(OR-Tools, CVXPY, SciPy)**, a **Neo4j knowledge graph**, and a **human-in-the-loop approval gate**. The stack runs locally via Docker Compose and ships to **Azure Kubernetes Service** through automated CI/CD.
 ---
 
 ## Tech Stack

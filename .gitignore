@@ -87,3 +87,7 @@ Thumbs.db
 .idea/
 .vscode/settings.json
 .vscode/launch.json
+
+# ──────────────────────────────────────────────
+# Writing rules
+Anti-AI-writing-rules.md
