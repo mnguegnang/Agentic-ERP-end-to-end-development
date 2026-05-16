@@ -4,6 +4,7 @@
 > Companion infrastructure repo: [`Agentic-ERP-Deploy`](https://github.com/mnguegnang/Agentic-ERP-Deploy) (Project 2)  
 > Deployed at: `http://erp.131-189-252-158.nip.io`
 
+
 Agentic ERP Supply Chain Copilot is a production-grade multi-agent system that answers supply-chain queries in plain language. It pairs a **LangGraph orchestrator** and a **CRAG retrieval pipeline** with 7 deterministic solver backends **(OR-Tools, CVXPY, SciPy)**, a **Neo4j knowledge graph**, and a **human-in-the-loop approval gate**. The stack runs locally via Docker Compose and ships to **Azure Kubernetes Service** through automated CI/CD.
 ---
 
@@ -26,30 +27,19 @@ Agentic ERP Supply Chain Copilot is a production-grade multi-agent system that a
 
 ## Architecture
 
+### Neuro-Symbolic Boundary
+
+<p align="center">
+        <img src="Architecture-diagram-boundary.png" alt="Archictecture diagram boundary" with="80%"/>
+</p>
+
+
 ### Request Flow
 
-```
-Browser  ──WebSocket /ws/chat──►  FastAPI
-                                      │
-                                  LangGraph Orchestrator
-                                      │
-                          ┌───────────┼───────────────────┐
-                          ▼           ▼                   ▼
-                  classify_intent  route_by_intent   synthesize_response
-                          │
-              ┌───────────┼──────────────────┐
-              ▼           ▼                  ▼
-      contract_query  kg_agent_node   solver_dispatch_node
-      (CRAG pipeline) (Neo4j Cypher)  (7 deterministic solvers)
-                                            │
-                                    total_cost > $10k?
-                                            │
-                              ┌─────────────┘
-                              ▼
-                    human_approval_gate
-                    (UUID stored in Redis)
-                    Manager calls POST /api/approve/{id}
-```
+<p align="center">
+        <img src="diagram-request-flow.png"
+        alt="Diagram request flow" with="80%"/>
+</p>
 
 ### Subsystems
 
@@ -253,7 +243,7 @@ For infrastructure provisioning, deployment commands, and rollback procedures, s
 | ADR-008 | HiTL threshold in `solver_dispatch_node` | `check_impact` edge ran after flag was set; moved check to setter node |
 | ADR-009 | Keyword + regex fallbacks on HTTP 429 | GitHub Models free tier (50 req/day); all agent paths must work without LLM quota |
 | ADR-012 | `echo` provider in promptfoo CI | Avoids LLM cost per PR; structural injection detection still valid |
-| ADR-013 | DPO fine-tuning deferred to Lightning AI L4 | 24 GB VRAM required; no CI runner provides GPU |
+| ADR-013 | DPO fine-tuning deferred to GPU computer | 24 GB VRAM required for fast fine-tuning |
 | ADR-014 | OIDC keyless Azure login in CI | Short-lived tokens; no long-lived secret in `AZURE_CREDENTIALS` |
 
 Full decision records in [`Project_Notes.md`](Project_Notes.md).
