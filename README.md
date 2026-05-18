@@ -69,46 +69,9 @@ Agentic ERP Supply Chain Copilot is a production-grade multi-agent system that a
 
 ## Repository Structure
 
-```
-Agentic-ERP-SupplyChain-Copilot/
-├── backend/
-│   ├── app/
-│   │   ├── agents/          # orchestrator.py, kg_agent.py, contract_agent.py
-│   │   ├── api/             # routes_chat.py, routes_approve.py, schemas.py
-│   │   ├── cache/           # semantic_cache.py
-│   │   ├── chains/          # CRAG retrieval chain
-│   │   ├── config.py        # settings + config.yaml loader
-│   │   ├── db/              # SQLAlchemy models + migrations
-│   │   ├── kg/              # Neo4j queries (parameterised Cypher only)
-│   │   ├── mcp/             # six FastMCP tool servers
-│   │   ├── rag/             # embedder, retriever, reranker
-│   │   ├── security/        # JWT auth
-│   │   ├── solvers/         # seven OR/CVXPY/SciPy solvers
-│   │   └── main.py          # FastAPI app, CORS, lifespan
-│   ├── scripts/             # seed_adventureworks.py, seed_neo4j.py, seed_contracts.py
-│   ├── tests/
-│   │   ├── unit/            # 7 solver unit tests + CRAG unit tests
-│   │   ├── integration/     # agent eval harness, CRAG recall@5
-│   │   └── red_team/        # prompt injection, SQL/Cypher injection, promptfoo suite
-│   ├── alembic.ini
-│   ├── Dockerfile           # API image (multi-stage, python:3.11-slim)
-│   └── requirements.txt     # Docker build context (subset of pyproject.toml)
-├── frontend/
-│   ├── src/
-│   │   ├── App.tsx           # Root layout, resizable panels, session persistence
-│   │   ├── ChatPanel.tsx     # WebSocket client, HiTL buttons, message search
-│   │   ├── GraphViewer.tsx   # vis-network knowledge graph
-│   │   └── SolverResults.tsx # Solver output accordion
-│   └── Dockerfile           # nginx:alpine static serve (Vite baked at build time)
-├── docker/
-│   └── docker-compose.yml   # postgres + neo4j + redis + api + frontend
-├── fine_tune/               # DPO training + eval scripts (run on Lightning AI L4)
-├── .github/workflows/
-│   └── ci.yml               # 5-job CI pipeline
-├── config.yaml              # Non-secret runtime config (committed)
-├── pyproject.toml           # Root-level (ADR-002); dev deps + ruff/mypy/black config
-└── TESTING_GUIDE.md         # Smoke test and eval guide
-```
+<p align="center">
+        <img src="repo-structure.png" alt="repo structure" with="80%"/>
+</p>
 
 ---
 
