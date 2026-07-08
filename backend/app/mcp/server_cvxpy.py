@@ -24,3 +24,9 @@ async def tool_solve_robust_minmax(suppliers: list[dict], demand: float, omega: 
 async def tool_solve_meio_gsm(stages: list[dict], service_level: float) -> dict:
     """MEIO guaranteed service model via CVXPY SCS."""
     return solve_meio_gsm(stages, service_level)
+
+
+if __name__ == "__main__":
+    # Run standalone over stdio so external MCP clients (Claude Code,
+    # inspector, other agents) can use these tools:  python -m app.mcp.server_cvxpy
+    mcp.run()

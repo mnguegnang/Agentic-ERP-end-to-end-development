@@ -162,6 +162,63 @@ async def test_solver_dispatch_mcnf_param_extraction_failure() -> None:
 
 
 @pytest.mark.asyncio
+async def test_solver_dispatch_passes_extracted_robust_params() -> None:
+    """robust_allocate: extracted parameters are forwarded to the solver."""
+    from app.api.schemas import RobustSupplier, SolveRobustInput
+
+    params = SolveRobustInput(
+        suppliers=[RobustSupplier(cost_mean=10.0, cost_uncertainty=2.0, capacity=500.0)],
+        demand=300.0,
+        omega=1.5,
+    )
+    mock_solver = MagicMock(return_value={"status": "OPTIMAL", "total_cost": 3000.0})
+    state = _make_state("robust_allocate")
+
+    with (
+        patch(
+            "app.agents.orchestrator.get_settings",
+            return_value=_patch_dispatch_settings(),
+        ),
+        patch(
+            "app.agents.orchestrator._extract_solver_params",
+            AsyncMock(return_value=params),
+        ),
+        patch("app.agents.orchestrator.solve_robust_minmax", mock_solver),
+    ):
+        result = await solver_dispatch_node(state)
+
+    mock_solver.assert_called_once_with(
+        suppliers=[{"cost_mean": 10.0, "cost_uncertainty": 2.0, "capacity": 500.0}],
+        demand=300.0,
+        omega=1.5,
+    )
+    assert result["solver_output"]["status"] == "OPTIMAL"
+
+
+@pytest.mark.asyncio
+async def test_solver_dispatch_extraction_failure_falls_back_to_defaults() -> None:
+    """If parameter extraction fails, the solver is still called with empty defaults."""
+    mock_solver = MagicMock(return_value={"status": "OPTIMAL", "makespan": 0, "schedule": []})
+    state = _make_state("jsp_schedule")
+
+    with (
+        patch(
+            "app.agents.orchestrator.get_settings",
+            return_value=_patch_dispatch_settings(),
+        ),
+        patch(
+            "app.agents.orchestrator._extract_solver_params",
+            AsyncMock(return_value=None),
+        ),
+        patch("app.agents.orchestrator.solve_jsp", mock_solver),
+    ):
+        result = await solver_dispatch_node(state)
+
+    mock_solver.assert_called_once_with(jobs=[])
+    assert result["solver_output"]["status"] == "OPTIMAL"
+
+
+@pytest.mark.asyncio
 async def test_solver_dispatch_solver_exception_caught() -> None:
     """Solver runtime error is caught and wrapped in error dict."""
     state = _make_state("bullwhip_analyze")

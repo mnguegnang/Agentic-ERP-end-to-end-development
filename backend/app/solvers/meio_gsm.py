@@ -107,19 +107,21 @@ def solve_meio_gsm(
     for i in range(n):
         preds = predecessors[i]
         if preds:
-            constraints.append({
-                "type": "ineq",
-                "fun": lambda s, i=i, preds=preds: (
-                    float(lead_times[i])
-                    + max(s[j] for j in preds)
-                    - s[i]
-                ),
-            })
+            constraints.append(
+                {
+                    "type": "ineq",
+                    "fun": lambda s, i=i, preds=preds: (
+                        float(lead_times[i]) + max(s[j] for j in preds) - s[i]
+                    ),
+                }
+            )
         else:
-            constraints.append({
-                "type": "ineq",
-                "fun": lambda s, i=i: float(lead_times[i]) - s[i],
-            })
+            constraints.append(
+                {
+                    "type": "ineq",
+                    "fun": lambda s, i=i: float(lead_times[i]) - s[i],
+                }
+            )
 
     # Run with multiple random restarts to avoid local minima.
     best_result = None

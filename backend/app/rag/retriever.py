@@ -12,6 +12,7 @@ Pipeline:
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 
 import asyncpg
@@ -20,7 +21,14 @@ from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
 
 from app.config import get_settings
-from app.rag.evaluator import INCORRECT, evaluate_relevance
+from app.rag.evaluator import (
+    AMBIGUOUS,
+    CORRECT,
+    INCORRECT,
+    evaluate_relevance,  # noqa: F401 — kept for callers/tests using the single-doc API
+    evaluate_relevance_batch,
+    rewrite_query,
+)
 from app.rag.reranker import rerank
 
 logger = logging.getLogger(__name__)
@@ -28,6 +36,12 @@ logger = logging.getLogger(__name__)
 # BGE-large-en-v1.5 (1024-dim) — same model used at indexing time (Blueprint §2.2)
 _EMBED_MODEL_NAME = "BAAI/bge-large-en-v1.5"
 _embedder: SentenceTransformer | None = None
+
+# ivfflat probe count for the pgvector search.  The contract index is built with
+# lists=100; probing all of them makes the ANN search exhaustive (exact) and
+# deterministic on this small corpus.  Raise the index's lists and lower this
+# proportionally if the corpus grows large enough for approximate search to pay off.
+_IVFFLAT_PROBES = 100
 
 
 def _get_embedder() -> SentenceTransformer:
@@ -73,21 +87,34 @@ async def _pgvector_search(
     top_k: int,
     dsn: str,
 ) -> list[dict]:
-    """Cosine similarity search via pgvector over contract_chunks table."""
+    """Cosine similarity search via pgvector over supply_chain.contract_embeddings.
+
+    ``supplier_id`` lives on supply_chain.contracts (not on the chunk rows), so
+    supplier filtering joins through the contract_id foreign key.
+    """
     try:
         # Strip asyncpg prefix if present (e.g. "postgresql+asyncpg://...")
         raw_dsn = dsn.replace("postgresql+asyncpg://", "postgresql://")
         conn = await asyncpg.connect(raw_dsn)
         await register_vector(conn)
 
+        # The contract corpus is indexed with ivfflat(lists=100).  For a small
+        # corpus that is far more lists than rows-per-list warrants, so the
+        # default probes=1 samples a near-empty list and can return too few
+        # (even zero) neighbours — especially once a JOIN reshapes the plan.
+        # Probing every list makes the search exhaustive (i.e. exact) and
+        # deterministic; on this corpus that is effectively free.
+        await conn.execute(f"SET ivfflat.probes = {_IVFFLAT_PROBES}")
+
         if supplier_id is not None:
             rows = await conn.fetch(
                 """
-                SELECT id, chunk_text, contract_id, supplier_id,
-                       1 - (embedding <=> $1::vector) AS score
-                FROM contract_chunks
-                WHERE supplier_id = $2
-                ORDER BY embedding <=> $1::vector
+                SELECT ce.id::text AS id, ce.chunk_text, ce.contract_id, c.supplier_id,
+                       1 - (ce.embedding <=> $1::vector) AS score
+                FROM supply_chain.contract_embeddings ce
+                JOIN supply_chain.contracts c ON ce.contract_id = c.contract_id
+                WHERE c.supplier_id = $2
+                ORDER BY ce.embedding <=> $1::vector
                 LIMIT $3
                 """,
                 embedding,
@@ -97,10 +124,11 @@ async def _pgvector_search(
         else:
             rows = await conn.fetch(
                 """
-                SELECT id, chunk_text, contract_id, supplier_id,
-                       1 - (embedding <=> $1::vector) AS score
-                FROM contract_chunks
-                ORDER BY embedding <=> $1::vector
+                SELECT ce.id::text AS id, ce.chunk_text, ce.contract_id, c.supplier_id,
+                       1 - (ce.embedding <=> $1::vector) AS score
+                FROM supply_chain.contract_embeddings ce
+                JOIN supply_chain.contracts c ON ce.contract_id = c.contract_id
+                ORDER BY ce.embedding <=> $1::vector
                 LIMIT $2
                 """,
                 embedding,
@@ -113,7 +141,45 @@ async def _pgvector_search(
         return []
 
 
+# ---------------------------------------------------------------------------
+# BM25 corpus cache — the contract corpus changes on ingest, not per query, so
+# rebuilding BM25Okapi (full-table SELECT + tokenise) on every request is pure
+# waste.  Cache per supplier_id; the TTL bounds staleness after out-of-process
+# re-ingest (seed scripts), and in-process ingestion can call
+# invalidate_bm25_cache() for an immediate refresh.
+# ---------------------------------------------------------------------------
+_BM25_CACHE: dict[str, tuple[float, list[dict], BM25Okapi | None]] = {}
+_BM25_CACHE_TTL_SECONDS = 600.0
+
+
+def invalidate_bm25_cache() -> None:
+    """Drop all cached BM25 corpora (call after (re)ingesting contracts)."""
+    _BM25_CACHE.clear()
+
+
 async def _load_bm25_corpus(
+    supplier_id: int | None,
+    dsn: str,
+) -> tuple[list[dict], BM25Okapi | None]:
+    """Return (meta_list, bm25_index) for the contract corpus, cached with TTL.
+
+    On DB failure returns an empty corpus (and does not cache the failure).
+    """
+    cache_key = f"supplier:{supplier_id}"
+    cached = _BM25_CACHE.get(cache_key)
+    if cached is not None:
+        built_at, meta, index = cached
+        if time.monotonic() - built_at < _BM25_CACHE_TTL_SECONDS:
+            return meta, index
+        del _BM25_CACHE[cache_key]
+
+    meta, index = await _build_bm25_corpus(supplier_id, dsn)
+    if meta:
+        _BM25_CACHE[cache_key] = (time.monotonic(), meta, index)
+    return meta, index
+
+
+async def _build_bm25_corpus(
     supplier_id: int | None,
     dsn: str,
 ) -> tuple[list[dict], BM25Okapi | None]:
@@ -126,13 +192,17 @@ async def _load_bm25_corpus(
         conn = await asyncpg.connect(raw_dsn)
         if supplier_id is not None:
             rows = await conn.fetch(
-                "SELECT id, chunk_text, contract_id, supplier_id "
-                "FROM contract_chunks WHERE supplier_id = $1",
+                "SELECT ce.id::text AS id, ce.chunk_text, ce.contract_id, c.supplier_id "
+                "FROM supply_chain.contract_embeddings ce "
+                "JOIN supply_chain.contracts c ON ce.contract_id = c.contract_id "
+                "WHERE c.supplier_id = $1",
                 supplier_id,
             )
         else:
             rows = await conn.fetch(
-                "SELECT id, chunk_text, contract_id, supplier_id " "FROM contract_chunks"
+                "SELECT ce.id::text AS id, ce.chunk_text, ce.contract_id, c.supplier_id "
+                "FROM supply_chain.contract_embeddings ce "
+                "JOIN supply_chain.contracts c ON ce.contract_id = c.contract_id"
             )
         await conn.close()
         meta = [dict(r) for r in rows]
@@ -158,12 +228,12 @@ def _bm25_search(
     return [meta[i] for i in ranked_indices[:top_k]]
 
 
-async def retrieve_and_evaluate(
+async def _hybrid_retrieve(
     query: str,
-    supplier_id: int | None = None,
-    top_k: int = 5,
-) -> CRAGResult:
-    """Full CRAG pipeline: dense → sparse → RRF → rerank → evaluate (Blueprint §4.4)."""
+    supplier_id: int | None,
+    top_k: int,
+) -> list[dict] | None:
+    """Embed → dense + sparse → RRF → rerank.  None signals an embedding error."""
     s = get_settings()
     rag_cfg = s.rag_config
     dense_k: int = int(rag_cfg.get("top_k_dense", top_k * 2))
@@ -175,9 +245,9 @@ async def retrieve_and_evaluate(
         query_vec: list[float] = embedder.encode(query, normalize_embeddings=True).tolist()
     except Exception as exc:
         logger.warning("Embedding failed: %s", exc)
-        return CRAGResult(documents=[], evaluation=INCORRECT, fallback="embedding_error")
+        return None
 
-    # 2. Dense (pgvector) + sparse (BM25) in parallel via asyncio.gather
+    # 2. Dense (pgvector) + sparse-corpus load in parallel via asyncio.gather
     import asyncio
 
     dense_task = _pgvector_search(query_vec, supplier_id, dense_k, s.database_url)
@@ -193,16 +263,53 @@ async def retrieve_and_evaluate(
     fused = reciprocal_rank_fusion(dense_results, sparse_results)
 
     # 5. CrossEncoder re-rank
-    reranked = rerank(query, fused, top_k=top_k)
+    return rerank(query, fused, top_k=top_k)
 
+
+async def _evaluate_documents(query: str, reranked: list[dict]) -> CRAGResult | None:
+    """Per-document CRAG gate: keep relevant chunks, or None if nothing survives.
+
+    Unlike top-1 gating, one bad top hit no longer discards good chunks below
+    it, and irrelevant chunks are dropped instead of riding along to synthesis.
+    """
+    labels = await evaluate_relevance_batch(query, reranked)
+    kept = [doc for doc, label in zip(reranked, labels) if label != INCORRECT]
+    if not kept:
+        return None
+    evaluation = CORRECT if CORRECT in labels else AMBIGUOUS
+    return CRAGResult(documents=kept, evaluation=evaluation)
+
+
+async def retrieve_and_evaluate(
+    query: str,
+    supplier_id: int | None = None,
+    top_k: int = 5,
+) -> CRAGResult:
+    """Full CRAG pipeline (Blueprint §4.4): hybrid retrieval → per-document
+    relevance gate → one corrective query-rewrite retry before giving up."""
+    reranked = await _hybrid_retrieve(query, supplier_id, top_k)
+    if reranked is None:
+        return CRAGResult(documents=[], evaluation=INCORRECT, fallback="embedding_error")
     if not reranked:
         return CRAGResult(documents=[], evaluation=INCORRECT, fallback="no_results")
 
-    # 6. CRAG evaluation on best chunk
-    top_doc = reranked[0]
-    evaluation = await evaluate_relevance(query, top_doc)
+    result = await _evaluate_documents(query, reranked)
+    if result is not None:
+        return result
 
-    if evaluation == INCORRECT:
-        return CRAGResult(documents=[], evaluation=INCORRECT, fallback="no_answer")
+    # Corrective action (CRAG): rewrite the query once and retry retrieval.
+    rewritten = await rewrite_query(query)
+    if rewritten:
+        logger.info("CRAG corrective rewrite: %r → %r", query, rewritten)
+        reranked_retry = await _hybrid_retrieve(rewritten, supplier_id, top_k)
+        if reranked_retry:
+            # Relevance is judged against the user's original question.
+            result = await _evaluate_documents(query, reranked_retry)
+            if result is not None:
+                return CRAGResult(
+                    documents=result.documents,
+                    evaluation=result.evaluation,
+                    fallback="query_rewritten",
+                )
 
-    return CRAGResult(documents=reranked, evaluation=evaluation)
+    return CRAGResult(documents=[], evaluation=INCORRECT, fallback="no_answer")

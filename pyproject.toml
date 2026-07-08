@@ -57,6 +57,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Prompt-optimization toolchain — only needed to (re)compile the intent
+# classifier (scripts/compile_intent_classifier.py); runtime falls back to the
+# zero-shot prompt when absent.
+dspy = [
+    "dspy>=2.6.14",
+]
 dev = [
     "pytest==8.3.4",
     "pytest-asyncio==0.24.0",
@@ -79,6 +85,10 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["backend/tests"]
 pythonpath = ["backend"]  # exposes app.* and scripts.* packages
+markers = [
+    "slow: long-running tests excluded from the per-PR integration job",
+    "live_llm: hits the real LLM API (cost); run nightly or pre-release",
+]
 
 # ------------------------------------------------------------------------------
 # black (formatter)

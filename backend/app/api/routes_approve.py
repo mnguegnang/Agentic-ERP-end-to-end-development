@@ -13,6 +13,7 @@ Flow:
 
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 
@@ -35,6 +36,11 @@ class ApprovalRequest(BaseModel):
     approved: bool = Field(..., description="True = approve, False = reject")
     approved_by: str = Field(default="supply-chain-manager", description="Approver identifier")
     reason: str | None = Field(default=None, description="Optional reason / comment")
+    password: str = Field(
+        ...,
+        min_length=1,
+        description="Manager approval password — required to approve OR reject",
+    )
 
 
 class ApprovalRecord(BaseModel):
@@ -46,6 +52,7 @@ class ApprovalRecord(BaseModel):
     approved_by: str | None
     reason: str | None
     solver_output: dict | None
+    final_response: str | None = None  # synthesized answer produced on graph resume
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +72,31 @@ def _get_redis() -> aioredis.Redis:  # type: ignore[type-arg]
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _verify_manager_password(provided: str) -> None:
+    """Constant-time check of the manager approval password.
+
+    Raises 403 on mismatch and 503 when no password is configured — approvals
+    are locked out rather than open by default.  Called BEFORE the decision
+    record is loaded so an unauthorized caller cannot probe which decision IDs
+    exist (a wrong password always yields the same 403).
+    """
+    expected = get_settings().manager_approval_password
+    if not expected:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Manager approval is not configured on this server "
+                "(MANAGER_APPROVAL_PASSWORD is unset) — approvals are locked."
+            ),
+        )
+    if not hmac.compare_digest(provided.encode(), expected.encode()):
+        logger.warning("HiTL approval attempt with invalid manager password — denied")
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid manager password — approval denied.",
+        )
 
 
 async def _load_record(decision_id: str) -> dict:
@@ -104,9 +136,15 @@ async def get_approval_status(decision_id: str) -> ApprovalRecord:
 async def submit_approval(decision_id: str, body: ApprovalRequest) -> ApprovalRecord:
     """Supply-chain manager approves or rejects a flagged routing decision.
 
+    - Verifies the manager password FIRST — wrong password → 403, and the
+      decision stays pending (neither approval nor rejection is recorded).
+    - Resumes the LangGraph run paused at the human-approval gate, which
+      synthesizes the final answer with the decision applied.
     - Updates Redis record  ``status → approved | rejected``.
     - Returns the updated record so the frontend can display the outcome.
     """
+    _verify_manager_password(body.password)
+
     record = await _load_record(decision_id)
 
     if record.get("status") != "pending":
@@ -115,9 +153,26 @@ async def submit_approval(decision_id: str, body: ApprovalRequest) -> ApprovalRe
             detail=f"Decision already resolved: status={record['status']!r}",
         )
 
+    # Resume the paused graph — this is what actually unblocks the pipeline.
+    from app.agents.orchestrator import resume_orchestrator
+
+    resumed = await resume_orchestrator(
+        decision_id,
+        approved=body.approved,
+        approved_by=body.approved_by,
+        reason=body.reason,
+    )
+    if resumed is None:
+        logger.warning(
+            "No paused graph run for decision_id=%s (expired or process restart); "
+            "recording the decision without a synthesized response",
+            decision_id,
+        )
+
     record["status"] = "approved" if body.approved else "rejected"
     record["approved_by"] = body.approved_by
     record["reason"] = body.reason
+    record["final_response"] = resumed.content if resumed else None
 
     # Persist updated record (keep same TTL by re-setting with same key)
     ttl = await _get_redis().ttl(f"hitl:{decision_id}")

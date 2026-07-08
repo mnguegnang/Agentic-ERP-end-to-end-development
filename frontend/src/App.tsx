@@ -134,9 +134,9 @@ const App: React.FC = () => {
   )
 
   const handleApprove = useCallback(
-    async (msgId: string, approved: boolean) => {
+    async (msgId: string, approved: boolean, password: string): Promise<boolean> => {
       const msg = messages.find((m) => m.id === msgId)
-      if (!msg || msg.role !== 'assistant' || !msg.decisionId) return
+      if (!msg || msg.role !== 'assistant' || !msg.decisionId) return false
 
       try {
         const res = await fetch(`${API_BASE}/api/approve/${msg.decisionId}`, {
@@ -146,20 +146,47 @@ const App: React.FC = () => {
             approved,
             approved_by: 'supply-chain-manager',
             reason: approved ? 'Reviewed and approved' : 'Rejected by manager',
+            password,
           }),
         })
+        if (res.status === 403) {
+          // Wrong manager password — decision stays pending; the card shows
+          // the inline error and lets the manager retry.
+          showToast('Invalid manager password — approval denied', 'warning')
+          return false
+        }
+        if (res.status === 503) {
+          showToast('Approvals are locked: no manager password configured on the server', 'warning')
+          return false
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const record = (await res.json()) as { status: string }
+        const record = (await res.json()) as { status: string; final_response?: string | null }
         const newStatus = record.status as 'approved' | 'rejected'
         setMessages((prev) =>
           prev.map((m) => (m.id === msgId ? { ...m, approvalStatus: newStatus } : m)),
         )
+        // The resumed graph synthesizes the final answer with the decision
+        // applied — surface it as a new assistant message.
+        if (record.final_response) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `${Date.now()}-${Math.random()}`,
+              role: 'assistant',
+              content: record.final_response as string,
+              timestamp: new Date(),
+            },
+          ])
+        }
         showToast(
           `Decision ${newStatus === 'approved' ? 'approved ✓' : 'rejected ✗'}`,
           newStatus === 'approved' ? 'success' : 'warning',
         )
+        return true
       } catch (err) {
         console.error('Approval request failed:', err)
+        showToast('Approval request failed — see console', 'warning')
+        return false
       }
     },
     [messages, showToast],

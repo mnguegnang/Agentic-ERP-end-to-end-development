@@ -42,3 +42,9 @@ async def tool_solve_disruption(
 ) -> dict:
     """Supply disruption re-allocation via CP-SAT MIP."""
     return solve_disruption(affected_components, alt_suppliers, demands)
+
+
+if __name__ == "__main__":
+    # Run standalone over stdio so external MCP clients (Claude Code,
+    # inspector, other agents) can use these tools:  python -m app.mcp.server_ortools
+    mcp.run()

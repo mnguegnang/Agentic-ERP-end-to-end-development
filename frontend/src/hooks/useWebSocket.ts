@@ -41,16 +41,25 @@ export const useWebSocket = (url: string, options: UseWebSocketOptions): UseWebS
     socketRef.current = ws
 
     ws.onopen = () => {
+      if (socketRef.current !== ws) return // superseded by a newer connect() call — ignore
       reconnectAttemptRef.current = 0
       setConnectionState('connected')
     }
 
     ws.onmessage = (event: MessageEvent) => {
+      if (socketRef.current !== ws) return
       const data = typeof event.data === 'string' ? event.data : String(event.data)
       onMessageRef.current(data)
     }
 
     ws.onclose = () => {
+      // A superseded socket (replaced by a newer connect() call, e.g. React
+      // StrictMode's dev-mode double-invoke of the mount effect) must not
+      // drive reconnection — otherwise its delayed onclose fires after the
+      // new socket is already open, schedules a reconnect timer anyway, and
+      // that timer's connect() call closes the healthy new socket — which
+      // schedules another reconnect in turn, forever.
+      if (socketRef.current !== ws) return
       if (intentionalCloseRef.current) return
       setConnectionState('reconnecting')
       const delay = RECONNECT_DELAYS[Math.min(reconnectAttemptRef.current, RECONNECT_DELAYS.length - 1)]

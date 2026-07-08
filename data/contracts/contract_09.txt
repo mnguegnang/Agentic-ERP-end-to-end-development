@@ -1,6 +1,6 @@
 SUPPLY AGREEMENT
 ================
-Contract No.: 0009
+Contract No.: 0029
 Date:         2023-01-01
 Buyer:        Adventure Works Cycles, Inc., 1 Microsoft Way, Redmond, WA 98052, USA
 Supplier:     AdventureWorks Direct LLC
@@ -106,7 +106,7 @@ EXHIBIT A — PRODUCT SCHEDULE
 See attached Purchase Order schedule, updated quarterly.
 
 EXHIBIT B — TECHNICAL SPECIFICATIONS
-See Supplier Quality Manual v9.0, incorporated herein by reference.
+See Supplier Quality Manual v29.0, incorporated herein by reference.
 
 IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first written above.
 

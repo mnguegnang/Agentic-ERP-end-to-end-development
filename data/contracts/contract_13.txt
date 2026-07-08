@@ -1,6 +1,6 @@
 SUPPLY AGREEMENT
 ================
-Contract No.: 0013
+Contract No.: 0033
 Date:         2024-07-01
 Buyer:        Adventure Works Cycles, Inc., 1 Microsoft Way, Redmond, WA 98052, USA
 Supplier:     Hanover Steel Works GmbH
@@ -106,7 +106,7 @@ EXHIBIT A — PRODUCT SCHEDULE
 See attached Purchase Order schedule, updated quarterly.
 
 EXHIBIT B — TECHNICAL SPECIFICATIONS
-See Supplier Quality Manual v13.0, incorporated herein by reference.
+See Supplier Quality Manual v33.0, incorporated herein by reference.
 
 IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first written above.
 

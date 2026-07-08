@@ -1,6 +1,6 @@
 SUPPLY AGREEMENT
 ================
-Contract No.: 0008
+Contract No.: 0028
 Date:         2025-02-01
 Buyer:        Adventure Works Cycles, Inc., 1 Microsoft Way, Redmond, WA 98052, USA
 Supplier:     Contoso Polymer Solutions
@@ -106,7 +106,7 @@ EXHIBIT A — PRODUCT SCHEDULE
 See attached Purchase Order schedule, updated quarterly.
 
 EXHIBIT B — TECHNICAL SPECIFICATIONS
-See Supplier Quality Manual v8.0, incorporated herein by reference.
+See Supplier Quality Manual v28.0, incorporated herein by reference.
 
 IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first written above.
 

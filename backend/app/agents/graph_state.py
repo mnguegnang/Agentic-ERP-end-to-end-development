@@ -23,5 +23,6 @@ class AgentState(TypedDict):
     rag_evaluation: str | None  # "correct" | "ambiguous" | "incorrect"
     human_approval_required: bool  # True → WebSocket approval request to frontend
     decision_id: str | None  # UUID stored in Redis for pending HiTL decisions
+    approval_status: str | None  # "approved" | "rejected" | None (set on graph resume)
     final_response: str | None  # synthesized final answer for user (Stage 4)
     error: str | None

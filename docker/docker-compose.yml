@@ -49,12 +49,17 @@ services:
     ports: ["8000:8000"]
     volumes:
       - ../config.yaml:/config.yaml:ro
+      # Persist HuggingFace model weights (BGE embedder + CrossEncoder,
+      # ~1.4 GB) across image rebuilds — otherwise the first query after
+      # every `--build` re-downloads them and looks like a hang.
+      - hf_cache:/root/.cache/huggingface
     environment:
       DATABASE_URL: postgresql+asyncpg://aw_user:${PG_PASSWORD}@postgres:5432/adventureworks
       NEO4J_URI: bolt://neo4j:7687
       NEO4J_PASSWORD: ${NEO4J_PASSWORD}
       REDIS_URL: redis://redis:6379
       GITHUB_TOKEN: ${GITHUB_TOKEN}
+      MANAGER_APPROVAL_PASSWORD: ${MANAGER_APPROVAL_PASSWORD}
       LANGCHAIN_TRACING_V2: "true"
       LANGCHAIN_API_KEY: ${LANGSMITH_API_KEY}
     depends_on:
@@ -72,3 +77,4 @@ services:
 volumes:
   pg_data:
   neo4j_data:
+  hf_cache:

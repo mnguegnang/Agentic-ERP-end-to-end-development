@@ -144,10 +144,27 @@ const Sources: React.FC<SourcesProps> = ({ docs, isDark = true }) => {
 // ─── HiTL approval card ──────────────────────────────────────────────────────
 interface ApprovalCardProps {
   msg: AssistantMessage
-  onApprove: (id: string, approved: boolean) => void
+  onApprove: (id: string, approved: boolean, password: string) => Promise<boolean>
 }
 const ApprovalCard: React.FC<ApprovalCardProps> = ({ msg, onApprove }) => {
+  const [password, setPassword] = useState('')
+  const [authError, setAuthError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
   if (!msg.humanApprovalRequired) return null
+
+  const submit = async (approved: boolean) => {
+    if (!password.trim() || submitting) return
+    setSubmitting(true)
+    setAuthError(null)
+    const ok = await onApprove(msg.id, approved, password)
+    if (!ok) {
+      setAuthError('Incorrect manager password — decision remains pending.')
+      setPassword('')
+    }
+    setSubmitting(false)
+  }
+
   return (
     <div className="approval-card">
       <div className="flex items-start gap-2 mb-2.5">
@@ -162,18 +179,44 @@ const ApprovalCard: React.FC<ApprovalCardProps> = ({ msg, onApprove }) => {
       </div>
 
       {msg.approvalStatus === 'pending' && (
-        <div className="flex items-center gap-2">
-          <button className="btn-approve" onClick={() => onApprove(msg.id, true)}>
-            <CheckCircle2 size={12} />
-            Approve
-          </button>
-          <button className="btn-reject" onClick={() => onApprove(msg.id, false)}>
-            <XCircle size={12} />
-            Reject
-          </button>
-          <span className="text-[10px] font-mono text-slate-500 ml-auto">
-            ID: {msg.decisionId?.slice(0, 8)}…
-          </span>
+        <div className="flex flex-col gap-2">
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setAuthError(null) }}
+            placeholder="Manager password (required to approve or reject)"
+            autoComplete="off"
+            className="w-full rounded-lg border border-slate-600/50 bg-slate-900/60 px-3 py-1.5
+              text-xs text-slate-200 placeholder-slate-500 focus:outline-none
+              focus:border-amber-500/60 transition-colors"
+          />
+          {authError && (
+            <p className="text-[11px] text-red-400 flex items-center gap-1">
+              <XCircle size={11} className="shrink-0" />
+              {authError}
+            </p>
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              className="btn-approve disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={() => submit(true)}
+              disabled={!password.trim() || submitting}
+            >
+              <CheckCircle2 size={12} />
+              {submitting ? 'Verifying…' : 'Approve'}
+            </button>
+            <button
+              className="btn-reject disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={() => submit(false)}
+              disabled={!password.trim() || submitting}
+            >
+              <XCircle size={12} />
+              {submitting ? 'Verifying…' : 'Reject'}
+            </button>
+            <span className="text-[10px] font-mono text-slate-500 ml-auto">
+              ID: {msg.decisionId?.slice(0, 8)}…
+            </span>
+          </div>
         </div>
       )}
 
@@ -201,7 +244,7 @@ const ApprovalCard: React.FC<ApprovalCardProps> = ({ msg, onApprove }) => {
 // ─── Single message bubble ───────────────────────────────────────────────────
 interface MessageBubbleProps {
   msg: Message
-  onApprove: (id: string, approved: boolean) => void
+  onApprove: (id: string, approved: boolean, password: string) => Promise<boolean>
   isDark?: boolean
 }
 
@@ -329,7 +372,7 @@ interface ChatPanelProps {
   isLoading: boolean
   connectionState: ConnectionState
   onSend: (text: string) => void
-  onApprove: (msgId: string, approved: boolean) => void
+  onApprove: (msgId: string, approved: boolean, password: string) => Promise<boolean>
   onReconnect: () => void
   isDark: boolean
   onToggleTheme: () => void

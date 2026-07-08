@@ -82,7 +82,10 @@ async def test_retrieve_and_evaluate_correct_evaluation() -> None:
         patch("app.rag.retriever._pgvector_search", AsyncMock(return_value=docs)),
         patch("app.rag.retriever._load_bm25_corpus", AsyncMock(return_value=([], None))),
         patch("app.rag.retriever.rerank", return_value=docs),
-        patch("app.rag.retriever.evaluate_relevance", AsyncMock(return_value=CORRECT)),
+        patch(
+            "app.rag.retriever.evaluate_relevance_batch",
+            AsyncMock(side_effect=lambda q, d: [CORRECT] * len(d)),
+        ),
     ):
         _patch_settings_rr(mock_s)
         mock_emb.return_value.encode = MagicMock(
@@ -131,6 +134,98 @@ async def test_retrieve_and_evaluate_embedding_failure() -> None:
 
     assert result.fallback == "embedding_error"
     assert result.evaluation == INCORRECT
+
+
+@pytest.mark.asyncio
+async def test_retrieve_and_evaluate_drops_only_irrelevant_chunks() -> None:
+    """Per-document gate: irrelevant chunks are filtered, relevant ones kept."""
+    docs = [
+        _doc("1", "Totally unrelated boilerplate."),
+        _doc("2", "Force majeure clause: neither party is liable for delays."),
+        _doc("3", "Related but partial: notice requirements for delays."),
+    ]
+
+    with (
+        patch("app.rag.retriever.get_settings") as mock_s,
+        patch("app.rag.retriever._get_embedder") as mock_emb,
+        patch("app.rag.retriever._pgvector_search", AsyncMock(return_value=docs)),
+        patch("app.rag.retriever._load_bm25_corpus", AsyncMock(return_value=([], None))),
+        patch("app.rag.retriever.rerank", return_value=docs),
+        patch(
+            "app.rag.retriever.evaluate_relevance_batch",
+            AsyncMock(return_value=[INCORRECT, CORRECT, AMBIGUOUS]),
+        ),
+    ):
+        _patch_settings_rr(mock_s)
+        mock_emb.return_value.encode = MagicMock(
+            return_value=MagicMock(tolist=MagicMock(return_value=[0.0] * 1024))
+        )
+
+        result = await retrieve_and_evaluate("force majeure provisions")
+
+    assert result.evaluation == CORRECT
+    assert [d["id"] for d in result.documents] == ["2", "3"]
+
+
+@pytest.mark.asyncio
+async def test_retrieve_and_evaluate_rewrite_retry_recovers() -> None:
+    """All chunks irrelevant → query is rewritten once and retrieval retried."""
+    bad_docs = [_doc("1", "Unrelated text.")]
+    good_docs = [_doc("2", "Force majeure clause text.")]
+    batch_eval = AsyncMock(side_effect=[[INCORRECT], [CORRECT]])
+    rerank_mock = MagicMock(side_effect=[bad_docs, good_docs])
+
+    with (
+        patch("app.rag.retriever.get_settings") as mock_s,
+        patch("app.rag.retriever._get_embedder") as mock_emb,
+        patch("app.rag.retriever._pgvector_search", AsyncMock(return_value=bad_docs)),
+        patch("app.rag.retriever._load_bm25_corpus", AsyncMock(return_value=([], None))),
+        patch("app.rag.retriever.rerank", rerank_mock),
+        patch("app.rag.retriever.evaluate_relevance_batch", batch_eval),
+        patch(
+            "app.rag.retriever.rewrite_query",
+            AsyncMock(return_value="force majeure contract clause"),
+        ),
+    ):
+        _patch_settings_rr(mock_s)
+        mock_emb.return_value.encode = MagicMock(
+            return_value=MagicMock(tolist=MagicMock(return_value=[0.0] * 1024))
+        )
+
+        result = await retrieve_and_evaluate("act of god stuff?")
+
+    assert result.evaluation == CORRECT
+    assert result.fallback == "query_rewritten"
+    assert [d["id"] for d in result.documents] == ["2"]
+
+
+@pytest.mark.asyncio
+async def test_retrieve_and_evaluate_no_answer_when_rewrite_unavailable() -> None:
+    """All chunks irrelevant and rewrite unavailable → terminal no_answer."""
+    docs = [_doc("1", "Unrelated text.")]
+
+    with (
+        patch("app.rag.retriever.get_settings") as mock_s,
+        patch("app.rag.retriever._get_embedder") as mock_emb,
+        patch("app.rag.retriever._pgvector_search", AsyncMock(return_value=docs)),
+        patch("app.rag.retriever._load_bm25_corpus", AsyncMock(return_value=([], None))),
+        patch("app.rag.retriever.rerank", return_value=docs),
+        patch(
+            "app.rag.retriever.evaluate_relevance_batch",
+            AsyncMock(return_value=[INCORRECT]),
+        ),
+        patch("app.rag.retriever.rewrite_query", AsyncMock(return_value=None)),
+    ):
+        _patch_settings_rr(mock_s)
+        mock_emb.return_value.encode = MagicMock(
+            return_value=MagicMock(tolist=MagicMock(return_value=[0.0] * 1024))
+        )
+
+        result = await retrieve_and_evaluate("nonsense query")
+
+    assert result.evaluation == INCORRECT
+    assert result.fallback == "no_answer"
+    assert result.documents == []
 
 
 # ---------------------------------------------------------------------------

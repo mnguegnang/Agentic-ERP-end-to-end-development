@@ -64,9 +64,7 @@ def solve_disruption(
     }
 
     # Keep only suppliers that can serve affected components
-    relevant: list[dict] = [
-        s for s in alt_suppliers if s["component"] in affected_set
-    ]
+    relevant: list[dict] = [s for s in alt_suppliers if s["component"] in affected_set]
 
     if not relevant:
         return {"status": "INFEASIBLE", "total_cost": 0.0, "allocations": []}
@@ -79,9 +77,7 @@ def solve_disruption(
 
     # Demand satisfaction constraints
     for comp, qty_needed in demand_map.items():
-        comp_vars = [
-            x_vars[i] for i, sup in enumerate(relevant) if sup["component"] == comp
-        ]
+        comp_vars = [x_vars[i] for i, sup in enumerate(relevant) if sup["component"] == comp]
         if not comp_vars:
             # No supplier can cover this component → infeasible by definition
             return {"status": "INFEASIBLE", "total_cost": 0.0, "allocations": []}

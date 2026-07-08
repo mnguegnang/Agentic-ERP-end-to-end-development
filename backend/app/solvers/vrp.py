@@ -69,9 +69,7 @@ def solve_vrp(
 
     # --- Distance (cost) callback ---
     def distance_callback(from_index: int, to_index: int) -> int:
-        return dist_matrix[manager.IndexToNode(from_index)][
-            manager.IndexToNode(to_index)
-        ]
+        return dist_matrix[manager.IndexToNode(from_index)][manager.IndexToNode(to_index)]
 
     transit_cb_idx = routing.RegisterTransitCallback(distance_callback)
     routing.SetArcCostEvaluatorOfAllVehicles(transit_cb_idx)

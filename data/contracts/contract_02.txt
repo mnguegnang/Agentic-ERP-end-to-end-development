@@ -1,6 +1,6 @@
 SUPPLY AGREEMENT
 ================
-Contract No.: 0002
+Contract No.: 0022
 Date:         2025-01-01
 Buyer:        Adventure Works Cycles, Inc., 1 Microsoft Way, Redmond, WA 98052, USA
 Supplier:     TQ-Electronics GmbH
@@ -106,7 +106,7 @@ EXHIBIT A — PRODUCT SCHEDULE
 See attached Purchase Order schedule, updated quarterly.
 
 EXHIBIT B — TECHNICAL SPECIFICATIONS
-See Supplier Quality Manual v2.0, incorporated herein by reference.
+See Supplier Quality Manual v22.0, incorporated herein by reference.
 
 IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first written above.
 

@@ -35,9 +35,7 @@ import numpy as np
 from scipy import stats
 
 
-def _simulate_echelon(
-    demand_in: np.ndarray, lead_time: int, forecast_window: int
-) -> np.ndarray:
+def _simulate_echelon(demand_in: np.ndarray, lead_time: int, forecast_window: int) -> np.ndarray:
     """Simulate base-stock orders for one echelon.
 
     Order_t = max(0, D_t + (F_t - F_{t-1}) * lead_time)

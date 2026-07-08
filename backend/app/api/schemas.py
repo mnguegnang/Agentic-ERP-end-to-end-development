@@ -87,6 +87,110 @@ class SolveMcnfInput(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Solver input schemas — one per intent, used with structured LLM extraction
+# (mirrors SolveMcnfInput; Blueprint §4.3.1 / §5.1.2 parameter-extraction gate)
+# ---------------------------------------------------------------------------
+
+
+class JspOperation(BaseModel):
+    """One operation of a job: runs on ``machine`` for ``duration`` time units."""
+
+    machine: int = Field(..., ge=0, description="Machine ID the operation runs on")
+    duration: int = Field(..., gt=0, description="Processing time in periods")
+
+
+class JspJob(BaseModel):
+    operations: list[JspOperation] = Field(
+        ..., min_length=1, description="Ordered operations of this job (precedence chain)"
+    )
+
+
+class SolveJspInput(BaseModel):
+    """Input schema for the solve_jsp tool (job-shop scheduling)."""
+
+    jobs: list[JspJob] = Field(..., min_length=1, description="Jobs to schedule")
+
+
+class VrpLocation(BaseModel):
+    id: str = Field(..., description="Location identifier")
+    x: float = Field(..., description="X coordinate")
+    y: float = Field(..., description="Y coordinate")
+    demand: int = Field(..., ge=0, description="Units demanded (0 for the depot)")
+
+
+class SolveVrpInput(BaseModel):
+    """Input schema for the solve_vrp tool (capacitated vehicle routing)."""
+
+    depot: int = Field(default=0, ge=0, description="Index of the depot in locations")
+    locations: list[VrpLocation] = Field(
+        ..., min_length=1, description="All stops including the depot"
+    )
+    vehicle_capacity: int = Field(..., gt=0, description="Max load per vehicle")
+    num_vehicles: int = Field(..., ge=1, description="Fleet size")
+
+
+class RobustSupplier(BaseModel):
+    cost_mean: float = Field(..., ge=0, description="Nominal unit cost")
+    cost_uncertainty: float = Field(..., ge=0, description="Unit-cost uncertainty half-width")
+    capacity: float = Field(..., gt=0, description="Maximum units this supplier can provide")
+
+
+class SolveRobustInput(BaseModel):
+    """Input schema for the solve_robust_minmax tool (robust allocation)."""
+
+    suppliers: list[RobustSupplier] = Field(..., min_length=1)
+    demand: float = Field(..., gt=0, description="Total demand to fulfil")
+    omega: float = Field(default=1.0, ge=0, description="Robustness / uncertainty budget")
+
+
+class MeioStage(BaseModel):
+    holding_cost: float = Field(..., ge=0, description="Per-unit holding cost at this stage")
+    demand_std: float = Field(..., ge=0, description="Demand standard deviation")
+    lead_time: float = Field(..., ge=0, description="Processing lead time (periods)")
+    predecessors: list[int] = Field(
+        default_factory=list, description="Indices of upstream stages feeding this one"
+    )
+
+
+class SolveMeioInput(BaseModel):
+    """Input schema for the solve_meio_gsm tool (multi-echelon inventory)."""
+
+    stages: list[MeioStage] = Field(..., min_length=1)
+    service_level: float = Field(default=0.95, gt=0, lt=1, description="Target fill rate")
+
+
+class AnalyzeBullwhipInput(BaseModel):
+    """Input schema for the analyze_bullwhip tool (demand amplification)."""
+
+    demand_series: list[float] = Field(
+        ..., min_length=3, description="Time-ordered end-customer demand observations"
+    )
+    lead_time: int = Field(default=1, ge=1, description="Replenishment lead time (periods)")
+    forecast_window: int = Field(default=4, ge=1, description="Moving-average window (periods)")
+    num_echelons: int = Field(default=2, ge=1, description="Number of supply-chain echelons")
+
+
+class DisruptionSupplier(BaseModel):
+    id: str = Field(..., description="Alternative supplier identifier")
+    component: str = Field(..., description="Component this supplier can provide")
+    cost: float = Field(..., ge=0, description="Per-unit cost from this supplier")
+    capacity: float = Field(..., gt=0, description="Maximum units available")
+
+
+class DisruptionDemand(BaseModel):
+    component: str = Field(..., description="Affected component identifier")
+    quantity: float = Field(..., gt=0, description="Units required")
+
+
+class SolveDisruptionInput(BaseModel):
+    """Input schema for the solve_disruption tool (re-allocation after disruption)."""
+
+    affected_components: list[str] = Field(..., min_length=1)
+    alt_suppliers: list[DisruptionSupplier] = Field(..., min_length=1)
+    demands: list[DisruptionDemand] = Field(..., min_length=1)
+
+
+# ---------------------------------------------------------------------------
 # Stage 4: Structured LLM output schemas (Blueprint §4.2, §4.5)
 # ---------------------------------------------------------------------------
 

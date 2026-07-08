@@ -427,7 +427,11 @@ class TestMcnfSolveHighCostPath:
 
     @pytest.mark.asyncio
     async def test_human_approval_gate_direct(self) -> None:
-        """Test human_approval_gate node in isolation (pre-set flag)."""
+        """Test human_approval_gate node in isolation.
+
+        The gate now pauses via interrupt(); outside a graph runtime the
+        interrupt is patched to simulate the manager's resume decision.
+        """
         from app.agents.orchestrator import human_approval_gate
 
         state: dict = {
@@ -435,15 +439,20 @@ class TestMcnfSolveHighCostPath:
             "intent": "mcnf_solve",
             "intent_confidence": 0.9,
             "human_approval_required": True,
+            "decision_id": "smoke-decision",
             "solver_output": {"total_cost": 50_000.0, "status": "OPTIMAL"},
             "final_response": None,
             "error": None,
         }
-        with patch("app.agents.orchestrator.get_settings", return_value=_mock_settings()):
+        with patch(
+            "app.agents.orchestrator.interrupt",
+            return_value={"approved": True, "approved_by": "manager"},
+        ) as mock_interrupt:
             result = await human_approval_gate(state)  # type: ignore[arg-type]
 
-        # flag should remain True since it was pre-set
+        mock_interrupt.assert_called_once()
         assert result["human_approval_required"] is True
+        assert result["approval_status"] == "approved"
 
 
 # ---------------------------------------------------------------------------

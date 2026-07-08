@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(echo \"tsc exit: $?\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000)",
+      "Bash(sudo ss -ltnp)",
+      "Bash(curl -s -o /dev/null -w \"http_code: %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(chromium-cli --help)",
+      "Bash(npm root *)",
+      "Bash(NODE_PATH=__CMDSUB_OUTPUT__/promptfoo/node_modules node /tmp/claude-1000/-home-nguegnang-Documents-Industrial-projects-Agentic-ERP-SupplyChain-Copilot/631d4015-e5f9-4b7d-bb97-a651c10ec76c/scratchpad/probe4.js)",
+      "Bash(docker compose *)",
+      "Bash(systemctl list-units *)",
+      "Bash(docker rm *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(snap list *)",
+      "Bash(mount)",
+      "Bash(awk '{print $3}')",
+      "Read(//var/lib/snapd/snaps/**)",
+      "Read(//snap/docker/**)",
+      "Read(//proc/324064/attr/**)",
+      "Read(//proc/324064/**)",
+      "Bash(awk '{print \"state:\", $3}')",
+      "Read(//proc/323989/attr/**)",
+      "Read(//proc/10436/attr/**)",
+      "Bash(docker exec *)",
+      "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}\\\\n' -X POST https://models.inference.ai.azure.com/chat/completions -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Content-Type: application/json' -d '{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":5}')",
+      "WebFetch(domain:docs.github.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(env)"
+    ]
+  }
+}

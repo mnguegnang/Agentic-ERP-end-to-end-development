@@ -29,9 +29,8 @@ Formulation (Robust LP with ellipsoidal uncertainty set):
 
 from __future__ import annotations
 
-import numpy as np
-
 import cvxpy as cp
+import numpy as np
 
 
 def solve_robust_minmax(
@@ -100,9 +99,7 @@ def solve_robust_minmax(
     price_of_robustness = max(0.0, robust_cost - nominal_cost)
 
     allocations = [
-        {"supplier": i, "quantity": round(float(x_val[i]), 6)}
-        for i in range(n)
-        if x_val[i] > 1e-6
+        {"supplier": i, "quantity": round(float(x_val[i]), 6)} for i in range(n) if x_val[i] > 1e-6
     ]
 
     return {

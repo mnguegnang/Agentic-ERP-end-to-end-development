@@ -116,3 +116,9 @@ async def get_product_bom(product_id: int) -> dict:
     except Exception as exc:
         logger.exception("get_product_bom failed for product_id=%s: %s", product_id, exc)
         return {"error": str(exc)}
+
+
+if __name__ == "__main__":
+    # Run standalone over stdio so external MCP clients (Claude Code,
+    # inspector, other agents) can use these tools:  python -m app.mcp.server_erp
+    mcp.run()

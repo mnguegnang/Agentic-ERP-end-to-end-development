@@ -17,12 +17,16 @@ Usage
 
 from __future__ import annotations
 
+import logging
+import os
 from functools import lru_cache
 from pathlib import Path
 
 import yaml  # type: ignore[import-untyped]
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 
 def _find_config_yaml() -> Path:
@@ -46,6 +50,62 @@ def _load_yaml() -> dict:
     """Load config.yaml. Called once per process."""
     with (_REPO_ROOT / "config.yaml").open(encoding="utf-8") as fh:
         return yaml.safe_load(fh)
+
+
+# ---------------------------------------------------------------------------
+# Shell-export footgun detection
+#
+# pydantic-settings gives an actual process environment variable priority
+# over the same key in .env — silently.  If a shell still has an old
+# GITHUB_TOKEN (or another secret) exported from an earlier debugging
+# session, it shadows a freshly rotated .env value with zero indication why
+# auth keeps failing (surfaces as a bare 401, hours later, in an unrelated
+# test).  This check doesn't change precedence — a deliberate shell/CI
+# override is legitimate — it just makes an *accidental* mismatch loud
+# instead of silent.
+# ---------------------------------------------------------------------------
+_SECRET_ENV_VARS = (
+    "GITHUB_TOKEN",
+    "PG_PASSWORD",
+    "NEO4J_PASSWORD",
+    "MANAGER_APPROVAL_PASSWORD",
+    "JWT_SECRET_KEY",
+    "LANGSMITH_API_KEY",
+)
+
+
+def _parse_dotenv(path: Path) -> dict[str, str]:
+    """Minimal KEY=VALUE reader for comparison only — pydantic-settings does
+    the real parsing that actually configures the app."""
+    values: dict[str, str] = {}
+    if not path.exists():
+        return values
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, _, value = stripped.partition("=")
+        values[key.strip()] = value.strip().strip("'\"")
+    return values
+
+
+def _warn_if_shell_overrides_dotenv() -> None:
+    dotenv_values = _parse_dotenv(_REPO_ROOT / ".env")
+    for var in _SECRET_ENV_VARS:
+        shell_value = os.environ.get(var)
+        dotenv_value = dotenv_values.get(var)
+        if shell_value is not None and dotenv_value is not None and shell_value != dotenv_value:
+            logger.warning(
+                "%s is exported in the shell environment and does NOT match "
+                "the value in .env — the shell export silently wins (this is "
+                "pydantic-settings' normal precedence, not a bug). If you "
+                "rotated this secret in .env, run `unset %s` in every open "
+                "terminal before restarting the app or tests, or the old "
+                "value keeps being used and failures look unrelated (e.g. a "
+                "bare 401/403 with no obvious cause).",
+                var,
+                var,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -89,6 +149,15 @@ class Settings(BaseSettings):
     jwt_secret_key: str = Field(default="changeme_replace_with_64_char_hex")
     jwt_algorithm: str = Field(default="HS256")
     jwt_expire_minutes: int = Field(default=60)
+
+    # -- Human-in-the-Loop -------------------------------------------------
+    manager_approval_password: str = Field(
+        default="",
+        description=(
+            "Secret required to approve/reject HiTL decisions via "
+            "POST /api/approve/{id}. Empty = approvals are locked out."
+        ),
+    )
 
     # -----------------------------------------------------------------------
     # YAML-backed properties (no Pydantic overhead on hot paths)
@@ -150,4 +219,5 @@ def get_settings() -> Settings:
 
     Cached after first call — safe for both sync and async contexts.
     """
+    _warn_if_shell_overrides_dotenv()
     return Settings()  # type: ignore[call-arg]

@@ -10,7 +10,9 @@ app:
 
 llm:
   provider: "github_models"
-  model: "gpt-4o"
+  # gpt-4o-mini has its own (larger) free-tier daily quota, separate from
+  # gpt-4o's 50/day — switch back to "gpt-4o" for higher answer quality.
+  model: "gpt-4o-mini"
   base_url: "https://models.inference.ai.azure.com"
   temperature: 0.0
   max_tokens: 4096

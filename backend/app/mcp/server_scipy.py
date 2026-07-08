@@ -22,3 +22,9 @@ async def tool_analyze_bullwhip(
 ) -> dict:
     """Bullwhip effect analysis: AR(1) rho, amplification ratios, spectral radius."""
     return analyze_bullwhip(demand_series, lead_time, forecast_window, num_echelons)
+
+
+if __name__ == "__main__":
+    # Run standalone over stdio so external MCP clients (Claude Code,
+    # inspector, other agents) can use these tools:  python -m app.mcp.server_scipy
+    mcp.run()

@@ -75,26 +75,39 @@ def test_check_impact_low_flag() -> None:
 
 
 # ---------------------------------------------------------------------------
-# human_approval_gate
+# human_approval_gate — interrupt()-based pause; the manager's decision is
+# delivered as the interrupt() return value on resume.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_human_gate_above_threshold_sets_flag() -> None:
-    state = _base_state(solver_output={"total_cost": 50_000.0})
-    with patch("app.agents.orchestrator.get_settings") as mock_s:
-        _patch_settings(mock_s)
+async def test_human_gate_approved_decision_sets_status() -> None:
+    state = _base_state(
+        solver_output={"total_cost": 50_000.0},
+        decision_id="test-decision",
+    )
+    with patch(
+        "app.agents.orchestrator.interrupt",
+        return_value={"approved": True, "approved_by": "manager"},
+    ) as mock_interrupt:
         result = await human_approval_gate(state)
+    mock_interrupt.assert_called_once()
     assert result["human_approval_required"] is True
+    assert result["approval_status"] == "approved"
 
 
 @pytest.mark.asyncio
-async def test_human_gate_below_threshold_no_flag() -> None:
-    state = _base_state(solver_output={"total_cost": 5_000.0})
-    with patch("app.agents.orchestrator.get_settings") as mock_s:
-        _patch_settings(mock_s)
+async def test_human_gate_rejected_decision_sets_status() -> None:
+    state = _base_state(
+        solver_output={"total_cost": 50_000.0},
+        decision_id="test-decision",
+    )
+    with patch(
+        "app.agents.orchestrator.interrupt",
+        return_value={"approved": False, "reason": "too expensive"},
+    ):
         result = await human_approval_gate(state)
-    assert result.get("human_approval_required") is False
+    assert result["approval_status"] == "rejected"
 
 
 # ---------------------------------------------------------------------------
@@ -245,3 +258,83 @@ async def test_run_orchestrator_exception_returns_error_response() -> None:
 
     assert isinstance(response, WsResponse)
     assert "error" in response.content.lower() or "graph crash" in response.content
+
+
+# ---------------------------------------------------------------------------
+# HiTL pause / resume — the graph must actually stop at the approval gate
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_run_orchestrator_pauses_on_high_cost_and_resumes_on_approval() -> None:
+    """High-cost solve: run_orchestrator returns a pending response WITHOUT a
+    synthesized answer; resume_orchestrator(approved=True) completes the run."""
+    from app.agents.orchestrator import resume_orchestrator  # noqa: PLC0415
+    from app.api.schemas import Arc, Commodity, IntentClassification, SolveMcnfInput
+
+    mock_intent = IntentClassification(
+        intent="mcnf_solve",
+        intent_confidence=0.95,
+        ddd_context="logistics",
+        reasoning="Network flow query.",
+    )
+    mcnf_params = SolveMcnfInput(
+        nodes=["A", "B"],
+        arcs=[Arc(**{"from": "A", "to": "B", "capacity": 10_000.0, "cost_per_unit": 5.0})],
+        commodities=[Commodity(source="A", sink="B", demand=10_000.0)],
+    )
+    high_cost_result = {"status": "OPTIMAL", "total_cost": 50_000.0}
+
+    mock_redis = MagicMock()
+    mock_redis.setex = AsyncMock()
+
+    with (
+        patch("app.agents.orchestrator.get_settings") as mock_s,
+        patch("app.agents.orchestrator.ChatOpenAI") as mock_llm_cls,
+        patch(
+            "app.agents.orchestrator._extract_mcnf_params",
+            AsyncMock(return_value=mcnf_params),
+        ),
+        patch(
+            "app.agents.orchestrator.solve_mcnf",
+            MagicMock(return_value=high_cost_result),
+        ),
+        patch("app.agents.orchestrator._get_redis", return_value=mock_redis),
+    ):
+        _patch_settings(mock_s)
+
+        mock_llm = MagicMock()
+        classify_structured = MagicMock()
+        classify_structured.ainvoke = AsyncMock(return_value=mock_intent)
+        synth_response = MagicMock()
+        synth_response.content = "APPROVED: proceed with the $50,000 routing plan."
+        mock_llm.with_structured_output.return_value = classify_structured
+        mock_llm.ainvoke = AsyncMock(return_value=synth_response)
+        mock_llm_cls.return_value = mock_llm
+
+        # 1. Initial run must PAUSE — pending banner, no synthesized answer.
+        pending = await run_orchestrator("Route 10000 units from A to B")
+
+        assert isinstance(pending, WsResponse)
+        assert pending.human_approval_required is True
+        assert pending.decision_id, "pending response must carry a decision_id"
+        assert "APPROVAL REQUIRED" in pending.content
+        assert "APPROVED: proceed" not in pending.content
+        # synthesize LLM must not have run while pending
+        mock_llm.ainvoke.assert_not_awaited()
+
+        # 2. Manager approves → graph resumes and synthesizes the final answer.
+        final = await resume_orchestrator(pending.decision_id, approved=True, approved_by="manager")
+
+    assert final is not None
+    assert final.content == "APPROVED: proceed with the $50,000 routing plan."
+    assert final.human_approval_required is True
+
+
+@pytest.mark.asyncio
+async def test_resume_orchestrator_unknown_decision_returns_none() -> None:
+    """Resuming a decision_id with no paused run returns None (expired/restart)."""
+    from app.agents.orchestrator import resume_orchestrator  # noqa: PLC0415
+
+    result = await resume_orchestrator("no-such-decision-id", approved=True)
+    assert result is None

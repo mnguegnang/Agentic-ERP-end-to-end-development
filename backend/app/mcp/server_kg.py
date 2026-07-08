@@ -66,3 +66,9 @@ async def get_supplier_alternatives(component_id: int) -> dict:
         component_id=component_id,
     )
     return {"alternatives": rows}
+
+
+if __name__ == "__main__":
+    # Run standalone over stdio so external MCP clients (Claude Code,
+    # inspector, other agents) can use these tools:  python -m app.mcp.server_kg
+    mcp.run()

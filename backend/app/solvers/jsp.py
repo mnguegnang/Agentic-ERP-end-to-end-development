@@ -49,11 +49,7 @@ def solve_jsp(
     model = cp_model.CpModel()
 
     # Horizon: loose upper bound = sum of all durations
-    horizon: int = sum(
-        int(op["duration"])
-        for job in jobs
-        for op in job.get("operations", [])
-    )
+    horizon: int = sum(int(op["duration"]) for job in jobs for op in job.get("operations", []))
 
     # (job_idx, op_idx) → (start_var, end_var, interval_var)
     all_tasks: dict[tuple[int, int], tuple] = {}
@@ -67,9 +63,7 @@ def solve_jsp(
             suffix = f"_{j_idx}_{o_idx}"
             start_var = model.NewIntVar(0, horizon, f"start{suffix}")
             end_var = model.NewIntVar(0, horizon, f"end{suffix}")
-            interval_var = model.NewIntervalVar(
-                start_var, duration, end_var, f"interval{suffix}"
-            )
+            interval_var = model.NewIntervalVar(start_var, duration, end_var, f"interval{suffix}")
             all_tasks[(j_idx, o_idx)] = (start_var, end_var, interval_var)
             machine_intervals.setdefault(machine, []).append(interval_var)
 
@@ -81,9 +75,7 @@ def solve_jsp(
     for j_idx, job in enumerate(jobs):
         ops = job.get("operations", [])
         for o_idx in range(len(ops) - 1):
-            model.Add(
-                all_tasks[(j_idx, o_idx + 1)][0] >= all_tasks[(j_idx, o_idx)][1]
-            )
+            model.Add(all_tasks[(j_idx, o_idx + 1)][0] >= all_tasks[(j_idx, o_idx)][1])
 
     # Makespan = max end time over all last operations
     makespan_var = model.NewIntVar(0, horizon, "makespan")

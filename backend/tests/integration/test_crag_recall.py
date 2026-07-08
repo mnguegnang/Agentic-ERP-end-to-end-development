@@ -231,15 +231,18 @@ async def test_crag_recall_at_5_per_query(tc: CRAGTestCase) -> None:
                 docs, key=lambda d: d.get("score", 0), reverse=True
             )[:5],
         ),
-        # Mock CRAG evaluator — returns 'correct' for ground-truth section
+        # Mock CRAG evaluator — labels each doc, 'correct' for ground-truth section
         patch(
-            "app.rag.retriever.evaluate_relevance",
+            "app.rag.retriever.evaluate_relevance_batch",
             new=AsyncMock(
-                side_effect=lambda q, doc: (
-                    "correct"
-                    if tc.expected_section_keyword.lower() in (doc.get("text") or "").lower()
-                    else "ambiguous"
-                )
+                side_effect=lambda q, docs: [
+                    (
+                        "correct"
+                        if tc.expected_section_keyword.lower() in (doc.get("text") or "").lower()
+                        else "ambiguous"
+                    )
+                    for doc in docs
+                ]
             ),
         ),
     ):
@@ -314,8 +317,13 @@ async def test_crag_returns_no_documents_when_evaluation_incorrect() -> None:
             side_effect=lambda q, docs, **kw: docs[:5],
         ),
         patch(
-            "app.rag.retriever.evaluate_relevance",
-            new=AsyncMock(return_value="incorrect"),
+            "app.rag.retriever.evaluate_relevance_batch",
+            new=AsyncMock(side_effect=lambda q, docs: ["incorrect"] * len(docs)),
+        ),
+        # Corrective rewrite disabled — this test asserts the terminal fallback.
+        patch(
+            "app.rag.retriever.rewrite_query",
+            new=AsyncMock(return_value=None),
         ),
     ):
         result = await retrieve_and_evaluate(

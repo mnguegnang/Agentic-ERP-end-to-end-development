@@ -49,7 +49,8 @@ After services are healthy, seed all three databases:
 
 ```bash
 python backend/scripts/seed_adventureworks.py
-python backend/scripts/seed_neo4j.py
+python -m backend.scripts.seed_neo4j   # must run as a module: it imports backend.scripts.seed_adventureworks,
+                                        # which only resolves when the repo root is on sys.path
 python backend/scripts/seed_contracts.py
 ```
 
@@ -65,8 +66,11 @@ pytest backend/tests/unit/test_mcnf.py::test_solve_mcnf_basic -v
 # Integration tests (requires live Postgres + Neo4j + Redis)
 pytest backend/tests/integration/ -v --tb=short -m "not slow"
 
-# Agent eval harness (100-query accuracy gate); use MOCK_LLM=true to avoid API cost
+# Agent eval harness (100-query routing gate; fully mocked, no LLM cost)
 MOCK_LLM=true pytest backend/tests/integration/test_agent_eval.py -v
+
+# LIVE intent-classification eval (hits the real LLM; nightly/pre-release, needs GITHUB_TOKEN)
+pytest backend/tests/integration/test_intent_eval_live.py -v -s
 
 # CRAG Recall@5 gate; use MOCK_NEO4J=true to skip live graph
 MOCK_NEO4J=true pytest backend/tests/integration/test_crag_recall.py -v
@@ -95,29 +99,30 @@ bandit -r backend/app -ll                # security scan (skips B101)
 
 ```
 Browser (WebSocket /ws/chat)
-    → FastAPI (routes_chat.py)
-    → LangGraph Orchestrator (agents/orchestrator.py)
+    → FastAPI (routes_chat.py) → semantic cache check (exact + embedding cosine ≥0.95)
+    → LangGraph Orchestrator (agents/orchestrator.py), thread_id per query
          ├── classify_intent  → structured LLM call → one of 10 intents
          │                      fallback: keyword rules on HTTP 429
          ├── route_by_intent (conditional edge)
          │    ├── "contract_query"  → contract_agent_node  (CRAG pipeline)
          │    ├── solver intents    → solver_dispatch_node  (deterministic OR)
          │    └── everything else   → kg_agent_node → solver_dispatch_node
-         ├── solver_dispatch_node
-         │    └── total_cost > $10k → store UUID in Redis → human_approval_required=True
+         ├── solver_dispatch_node — structured LLM param extraction per solver
+         │    └── total_cost > $10k → decision_id (= thread_id) stored in Redis
          ├── check_impact (conditional edge)
-         │    ├── high_impact → human_approval_gate (pauses; manager calls POST /api/approve/{id})
+         │    ├── high_impact → human_approval_gate — interrupt() PAUSES the graph;
+         │    │                 POST /api/approve/{id} resumes it with the decision
          │    └── low_impact  → synthesize_response
-         └── synthesize_response → WsResponse back to browser
+         └── synthesize_response → WsResponse back to browser (cached if low-stakes)
 ```
 
 ### Key Subsystems
 
 **LangGraph state** — `agents/graph_state.py` defines `GraphState` (TypedDict). Every node reads/writes this dict; the conditional edges branch on its fields.
 
-**Intent classification** — 10 intents: `mcnf_solve`, `jsp_schedule`, `vrp_route`, `robust_allocate`, `meio_optimize`, `bullwhip_analyze`, `disruption_resource`, `kg_query`, `contract_query`, `multi_step`. Confidence threshold is `0.7` (from `config.yaml`); below it the orchestrator asks the user to clarify.
+**Intent classification** — 10 intents: `mcnf_solve`, `jsp_schedule`, `vrp_route`, `robust_allocate`, `meio_optimize`, `bullwhip_analyze`, `disruption_resource`, `kg_query`, `contract_query`, `multi_step`. Confidence threshold is `0.7` (from `config.yaml`); below it the orchestrator asks the user to clarify. Two classifier paths: if `agents/compiled_intent_classifier.json` exists (produced by `python backend/scripts/compile_intent_classifier.py`, needs `pip install -e ".[dspy]"`), the DSPy-compiled program is used; otherwise the zero-shot structured-output prompt. The DSPy path is strict opt-in — missing package or artifact falls through silently.
 
-**CRAG pipeline** (`agents/contract_agent.py`) — BGE-large-en-v1.5 embed → pgvector cosine + BM25 → RRF@60 fusion → CrossEncoder rerank (ms-marco-MiniLM-L-12-v2) → LLM relevance evaluation. Irrelevant chunks are dropped before synthesis.
+**CRAG pipeline** (`agents/contract_agent.py`) — BGE-large-en-v1.5 embed → pgvector cosine + BM25 (index cached in-process, 10 min TTL) → RRF@60 fusion → CrossEncoder rerank (ms-marco-MiniLM-L-12-v2) → per-document LLM relevance labels in one batched call. Irrelevant chunks are dropped individually; if every chunk is irrelevant the query is rewritten once (`rag/evaluator.rewrite_query`) and retrieval retried before returning `no_answer`.
 
 **KG Think-on-Graph** (`agents/kg_agent.py`) — extracts entities via LLM, selects from a hardcoded relation whitelist, issues parameterized Cypher against Neo4j (never raw string interpolation), returns structured triples.
 
@@ -132,11 +137,11 @@ Browser (WebSocket /ws/chat)
 | MEIO/GSM | CVXPY | `meio_optimize` |
 | Bullwhip | SciPy | `bullwhip_analyze` |
 
-**Human-in-the-Loop** — approval records are stored in Redis with a 24 h TTL, keyed by UUID. `routes_approve.py` exposes `GET /api/approve/{id}` (fetch pending decision) and `POST /api/approve/{id}` (approve or reject). The frontend renders an Approve/Reject banner when `human_approval_required=True` arrives over the WebSocket.
+**Human-in-the-Loop** — the graph is compiled with a `MemorySaver` checkpointer; `human_approval_gate` calls `interrupt()`, so high-cost runs genuinely pause before any answer is synthesized. The `decision_id` equals the LangGraph `thread_id` and is stored in Redis (24 h TTL) for audit. `POST /api/approve/{id}` requires the manager password (`MANAGER_APPROVAL_PASSWORD` in `.env`; wrong → 403 and the decision stays pending, unset → 503 locked) and then calls `resume_orchestrator()`, which resumes the paused run with the manager's decision and returns the synthesized `final_response` in the approval record. Caveat: the checkpointer is in-process — an API restart drops paused runs (the Redis record survives, but the run cannot be resumed).
 
-**Semantic cache** (`cache/semantic_cache.py`) — Redis-backed, TTL 3600 s. Short-circuits the full graph traversal for near-duplicate queries.
+**Semantic cache** (`cache/semantic_cache.py`) — Redis-backed, TTL 3600 s, checked in `routes_chat.py` before the graph runs. Two levels: exact SHA-256 match on the normalized query, then cosine ≥ 0.95 between BGE query embeddings. A semantic hit additionally requires a **lexical guard** to pass — the two queries must share the same numbers and entity codes — so parametric queries ("Allocate 400 units" vs "1000 units", "supplier 4" vs "5") are never answered from each other's cached result. Only low-stakes responses are cached (never approval-gated, error/degraded, or `unclear`-intent responses).
 
-**MCP tool servers** (`mcp/`) — six FastMCP servers expose typed tools to the agent: `server_erp.py` (ORM queries), `server_kg.py` (Neo4j Cypher, whitelisted), `server_crag.py` (contract search), `server_ortools.py` (MCNF/JSP/VRP/Disruption), `server_cvxpy.py` (Robust/MEIO), `server_scipy.py` (Bullwhip).
+**MCP tool servers** (`mcp/`) — six FastMCP servers form the EXTERNAL tool interface (the in-process orchestrator calls solver functions directly; the MCP tools delegate to those same functions, verified by `tests/unit/test_mcp_servers.py`): `server_erp.py` (ORM queries), `server_kg.py` (Neo4j Cypher, whitelisted), `server_crag.py` (contract search), `server_ortools.py` (MCNF/JSP/VRP/Disruption), `server_cvxpy.py` (Robust/MEIO), `server_scipy.py` (Bullwhip). Run one standalone over stdio with e.g. `python -m app.mcp.server_ortools` (from `backend/`, venv active) to plug it into Claude Code or the MCP inspector.
 
 ### Databases
 
