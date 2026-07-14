@@ -115,6 +115,10 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+# Solver modules use uppercase names for mathematical quantities (T = horizon,
+# NLT = net lead time, SS = safety stock, SI = inbound service time) to match
+# the operations-research notation in their docstrings — N806 is intentional.
+"backend/app/solvers/*" = ["N806"]
 # Seed scripts contain tabular data and contract template strings — E501 is acceptable
 "backend/scripts/*" = ["E501"]
 # Test files: F401 auto-fix would remove stub imports needed for future stages;

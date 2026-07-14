@@ -89,7 +89,9 @@ def solve_disruption(
 
     solver = cp_model.CpSolver()
     status = solver.Solve(model)
-    status_str = _STATUS_MAP.get(status, "UNKNOWN")
+    # solver.Solve() returns CpSolverStatus; the stubs don't treat it as int,
+    # but at runtime it is the same int constant used as the map keys.
+    status_str = _STATUS_MAP.get(status, "UNKNOWN")  # type: ignore[call-overload]
 
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         return {"status": status_str, "total_cost": 0.0, "allocations": []}

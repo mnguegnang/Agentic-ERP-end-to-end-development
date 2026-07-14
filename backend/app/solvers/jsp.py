@@ -90,7 +90,9 @@ def solve_jsp(
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = time_limit_sec
     status = solver.Solve(model)
-    status_str = _STATUS_MAP.get(status, "UNKNOWN")
+    # solver.Solve() returns CpSolverStatus; the stubs don't treat it as int,
+    # but at runtime it is the same int constant used as the map keys.
+    status_str = _STATUS_MAP.get(status, "UNKNOWN")  # type: ignore[call-overload]
 
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         return {"status": status_str, "makespan": 0, "schedule": []}

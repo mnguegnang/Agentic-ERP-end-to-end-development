@@ -98,7 +98,7 @@ def solve_meio_gsm(
         return float(holding @ SS)
 
     # Variable bounds: s_i >= 0; end stages fixed to 0.
-    bounds = [(0.0, None)] * n
+    bounds: list[tuple[float, float | None]] = [(0.0, None)] * n
     for i in end_stages:
         bounds[i] = (0.0, 0.0)
 
