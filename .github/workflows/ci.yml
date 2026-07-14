@@ -237,25 +237,50 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Azure is optional. When AZURE_CREDENTIALS is configured the images are
+      # built AND pushed to ACR (full deploy path). When it is absent — e.g. the
+      # Azure resources were torn down to avoid charges — the job still builds
+      # both images to validate the Dockerfiles, then skips login and push so CI
+      # stays green. Re-enabling deploy later is only a matter of setting the
+      # AZURE_CREDENTIALS and ACR_NAME secrets again (see ADR-014). GitHub Actions
+      # cannot read `secrets` inside an `if:`, so presence is surfaced as a step
+      # output first.
+      - name: Check Azure configuration
+        id: azurecfg
+        run: |
+          if [ -n "${{ secrets.AZURE_CREDENTIALS }}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "AZURE_CREDENTIALS unset — building images without pushing to ACR."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Azure login (OIDC federation)
+        if: steps.azurecfg.outputs.enabled == 'true'
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Log in to Azure Container Registry
+        if: steps.azurecfg.outputs.enabled == 'true'
         run: az acr login --name ${{ secrets.ACR_NAME }}
 
       - name: Set image tags
         id: tags
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
-          echo "api_tag=${{ secrets.ACR_NAME }}.azurecr.io/agentic-erp-api:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "frontend_tag=${{ secrets.ACR_NAME }}.azurecr.io/agentic-erp-frontend:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          echo "api_latest=${{ secrets.ACR_NAME }}.azurecr.io/agentic-erp-api:latest" >> "$GITHUB_OUTPUT"
-          echo "frontend_latest=${{ secrets.ACR_NAME }}.azurecr.io/agentic-erp-frontend:latest" >> "$GITHUB_OUTPUT"
+          if [ -n "${{ secrets.ACR_NAME }}" ]; then
+            PREFIX="${{ secrets.ACR_NAME }}.azurecr.io/"
+          else
+            PREFIX=""
+          fi
+          echo "api_tag=${PREFIX}agentic-erp-api:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "frontend_tag=${PREFIX}agentic-erp-frontend:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "api_latest=${PREFIX}agentic-erp-api:latest" >> "$GITHUB_OUTPUT"
+          echo "frontend_latest=${PREFIX}agentic-erp-frontend:latest" >> "$GITHUB_OUTPUT"
           echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push API image
+      - name: Build API image
         run: |
           docker build \
             --file backend/Dockerfile \
@@ -263,12 +288,15 @@ jobs:
             --tag ${{ steps.tags.outputs.api_latest }} \
             --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
             --build-arg GIT_SHA=${{ steps.tags.outputs.short_sha }} \
-            --cache-from ${{ steps.tags.outputs.api_latest }} \
             .
+
+      - name: Push API image
+        if: steps.azurecfg.outputs.enabled == 'true'
+        run: |
           docker push ${{ steps.tags.outputs.api_tag }}
           docker push ${{ steps.tags.outputs.api_latest }}
 
-      - name: Build and push frontend image
+      - name: Build frontend image
         run: |
           docker build \
             --file frontend/Dockerfile \
@@ -278,8 +306,11 @@ jobs:
             --build-arg GIT_SHA=${{ steps.tags.outputs.short_sha }} \
             --build-arg VITE_WS_BASE_URL=ws://erp.131-189-252-158.nip.io \
             --build-arg VITE_API_BASE_URL=http://erp.131-189-252-158.nip.io \
-            --cache-from ${{ steps.tags.outputs.frontend_latest }} \
             .
+
+      - name: Push frontend image
+        if: steps.azurecfg.outputs.enabled == 'true'
+        run: |
           docker push ${{ steps.tags.outputs.frontend_tag }}
           docker push ${{ steps.tags.outputs.frontend_latest }}
 
@@ -304,12 +335,28 @@ jobs:
     if: github.ref == 'refs/heads/master'
 
     steps:
+      # DEPLOY_REPO_PAT gates the actual dispatch. When set, the deploy event
+      # fires (full path); when absent the job no-ops green instead of failing,
+      # so CI stays complete without a configured deploy token. Surfaced as a
+      # step output because `secrets` cannot be read inside an `if:`.
+      - name: Check deploy token
+        id: deploycfg
+        run: |
+          if [ -n "${{ secrets.DEPLOY_REPO_PAT }}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "DEPLOY_REPO_PAT unset — skipping deploy dispatch (CI still green)."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Download image metadata
+        if: steps.deploycfg.outputs.enabled == 'true'
         uses: actions/download-artifact@v4
         with:
           name: image-metadata
 
       - name: Dispatch deploy event to Agentic-ERP-Deployment
+        if: steps.deploycfg.outputs.enabled == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.DEPLOY_REPO_PAT }}

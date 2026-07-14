@@ -223,6 +223,8 @@ Daemon re-creates all isolation chains (`DOCKER-ISOLATION-STAGE-1`, `DOCKER-ISOL
 | **Required Azure setup** | Federated credential must be configured on the service principal: `subject: repo:<owner>/Agentic-ERP-SupplyChain-Copilot:ref:refs/heads/master`. |
 | **Status** | Approved |
 
+**Amendment (2026-07-14) — Azure made optional so CI is green without a live subscription.** The Azure resources were torn down to stop incurring charges, and the `AZURE_CREDENTIALS` / `ACR_NAME` / `DEPLOY_REPO_PAT` secrets were never provisioned (see Open Items). `azure/login@v2` then failed with *"Not all values are present. Ensure 'client-id' and 'tenant-id' are supplied"*, blocking `build-and-push-images` and everything downstream. The job now surfaces secret presence via a `Check Azure configuration` step output (GitHub Actions cannot read `secrets` inside an `if:`) and gates the login + `az acr login` + `docker push` steps on it: with the secrets set, images build **and** push to ACR (full deploy path, unchanged); without them, both images still **build** (validating the Dockerfiles) and push is skipped, so CI stays green. `trigger-deploy` is gated the same way on `DEPLOY_REPO_PAT` — it fires the deploy `repository_dispatch` when the token is set, and no-ops green otherwise. No Azure/deploy code was removed; re-enabling the full path is purely a matter of re-provisioning the secrets. `--cache-from` was dropped from the builds since it requires registry access that is unavailable without ACR.
+
 ---
 
 ## Open Items
@@ -230,8 +232,8 @@ Daemon re-creates all isolation chains (`DOCKER-ISOLATION-STAGE-1`, `DOCKER-ISOL
 - [ ] Confirm AdventureWorks dataset source (dump file URL or generate from scratch) — needed for Stage 2 seed scripts
 - [ ] Confirm LangSmith project name (currently `agentic-erp-supply-chain` in config.yaml)
 - [ ] Node.js 22 LTS nvm installation — verify before frontend scaffolding (Stage 3)
-- [ ] Configure OIDC federated credential on Azure service principal for CI ACR push (ADR-014)
-- [ ] Provision `ACR_NAME`, `AZURE_CREDENTIALS`, `DEPLOY_REPO_PAT` as GitHub repository secrets (§6.6)
+- [ ] Configure OIDC federated credential on Azure service principal for CI ACR push (ADR-014) — *deferred: CI now builds without pushing when Azure is unconfigured (ADR-014 amendment 2026-07-14). Only needed to resume real ACR pushes/AKS deploys.*
+- [ ] Provision `ACR_NAME`, `AZURE_CREDENTIALS`, `DEPLOY_REPO_PAT` as GitHub repository secrets (§6.6) — *deferred: optional; set `DEPLOY_REPO_PAT` (a free GitHub PAT, no Azure charge) if you want `trigger-deploy` to actually fire the dispatch.*
 
 ### ADR-004 — asyncpg for Seed Scripts (not SQLAlchemy ORM)
 

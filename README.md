@@ -185,9 +185,9 @@ frontend-quality          integration-tests ──────── red-team �
                                                                        → Agentic-ERP-Deploy
 ```
 
-**Required GitHub secrets:** `AZURE_CREDENTIALS`, `ACR_NAME`, `DEPLOY_REPO_PAT`
+**Optional GitHub secrets:** `AZURE_CREDENTIALS`, `ACR_NAME` (image push), `DEPLOY_REPO_PAT` (deploy dispatch)
 
-The `build-and-push-images` job uses OIDC keyless Azure login (`id-token: write`) — no long-lived credentials stored (ADR-014). Images are tagged with the short Git SHA and pushed as both `:<sha>` and `:latest`. The `VITE_WS_BASE_URL` and `VITE_API_BASE_URL` build args are baked into the frontend image at CI build time (Vite replaces `import.meta.env.*` at compile time — these cannot be injected at runtime).
+The `build-and-push-images` job uses OIDC keyless Azure login (`id-token: write`) — no long-lived credentials stored (ADR-014). Images are tagged with the short Git SHA and pushed as both `:<sha>` and `:latest`. These steps are **Azure-optional**: when the secrets are unset (e.g. no live Azure subscription), the job still builds both images to validate the Dockerfiles and skips the login/push, and `trigger-deploy` skips its dispatch — so the pipeline stays green without any Azure infrastructure. Setting the secrets again re-enables the full push + deploy path (ADR-014 amendment). The `VITE_WS_BASE_URL` and `VITE_API_BASE_URL` build args are baked into the frontend image at CI build time (Vite replaces `import.meta.env.*` at compile time — these cannot be injected at runtime).
 
 ---
 
