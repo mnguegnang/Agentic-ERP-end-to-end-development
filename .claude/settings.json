@@ -30,7 +30,13 @@
       "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}\\\\n' -X POST https://models.inference.ai.azure.com/chat/completions -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Content-Type: application/json' -d '{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":5}')",
       "WebFetch(domain:docs.github.com)",
       "WebFetch(domain:github.com)",
-      "Bash(env)"
+      "Bash(env)",
+      "Bash(python3 -c ' *)",
+      "Bash(git checkout *)",
+      "WebFetch(domain:codingbrewery.com)",
+      "WebFetch(domain:bagerbach.com)",
+      "Bash(grep -n \"^  [a-z-]*:$\\\\|name:\" .github/workflows/ci.yml)",
+      "Bash(awk '/^CONTRACT_DEFS/,/^\\\\]/' backend/scripts/seed_adventureworks.py)"
     ]
   }
 }

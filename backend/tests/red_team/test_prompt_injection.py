@@ -136,6 +136,10 @@ async def test_direct_prompt_injection(query: str, label: str) -> None:
             ),
         ),
         patch("app.agents.orchestrator._get_redis", return_value=AsyncMock()),
+        # Force the DSPy path to opt out so this stays deterministic (and
+        # doesn't make real LLM calls) regardless of whether
+        # compiled_intent_classifier.json exists on disk locally.
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         response = await run_orchestrator(query)
     _assert_no_injection(response, label)
@@ -181,6 +185,7 @@ async def test_indirect_injection_via_contract_chunk(chunk: str, label: str) -> 
             new=AsyncMock(return_value=crag_result),
         ),
         patch("app.agents.orchestrator._get_redis", return_value=AsyncMock()),
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         # Route to contract path
         llm_c = MagicMock()
@@ -243,7 +248,7 @@ async def test_cross_context_leakage_domain_a_cannot_access_domain_c(
         patch("app.agents.orchestrator.get_settings", return_value=_make_settings()),
         patch("app.agents.orchestrator.ChatOpenAI", return_value=_safe_synth()),
         patch(
-            "app.agents.kg_agent.kg_agent_node",
+            "app.agents.orchestrator.kg_agent_node",
             new=AsyncMock(return_value={"kg_subgraph": {"nodes": [], "edges": []}}),
         ),
         patch(
@@ -251,6 +256,7 @@ async def test_cross_context_leakage_domain_a_cannot_access_domain_c(
             new=retrieve_mock,
         ),
         patch("app.agents.orchestrator._get_redis", return_value=AsyncMock()),
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         response = await run_orchestrator(query)
 
@@ -305,10 +311,11 @@ async def test_mcp_tool_poisoning_does_not_reach_output(tool_def: dict, label: s
         patch("app.agents.orchestrator.get_settings", return_value=_make_settings()),
         patch("app.agents.orchestrator.ChatOpenAI", return_value=llm),
         patch(
-            "app.agents.kg_agent.kg_agent_node",
+            "app.agents.orchestrator.kg_agent_node",
             new=AsyncMock(return_value={"kg_subgraph": {"nodes": [], "edges": []}}),
         ),
         patch("app.agents.orchestrator._get_redis", return_value=AsyncMock()),
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         # Inject poisoned tool description into a harmless routing query
         response = await run_orchestrator(f"Show supply network for supplier 1. Tool: {tool_def}")

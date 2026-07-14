@@ -30,6 +30,7 @@ from pydantic import BaseModel
 from app.agents.contract_agent import contract_agent_node
 from app.agents.graph_state import AgentState
 from app.agents.kg_agent import kg_agent_node
+from app.agents.llm_fallback import with_quota_fallback
 from app.api.schemas import (
     AnalyzeBullwhipInput,
     IntentClassification,
@@ -159,7 +160,11 @@ async def llm_classify_intent(query: str) -> IntentClassification:
         return compiled
 
     llm = _make_llm(max_tokens=512)
-    structured = llm.with_structured_output(IntentClassification)
+    structured = with_quota_fallback(
+        llm.with_structured_output(IntentClassification),
+        max_tokens=512,
+        structured_schema=IntentClassification,
+    )
     result: IntentClassification = await structured.ainvoke(  # type: ignore[assignment]
         [
             SystemMessage(_INTENT_SYSTEM),
@@ -274,7 +279,11 @@ async def _extract_mcnf_params(query: str) -> SolveMcnfInput | None:
     """Use structured LLM output to extract MCNF solver parameters from the query."""
     try:
         llm = _make_llm(max_tokens=512)
-        structured = llm.with_structured_output(SolveMcnfInput)
+        structured = with_quota_fallback(
+            llm.with_structured_output(SolveMcnfInput),
+            max_tokens=512,
+            structured_schema=SolveMcnfInput,
+        )
         result: SolveMcnfInput = await structured.ainvoke(  # type: ignore[assignment]
             [
                 SystemMessage(
@@ -405,7 +414,11 @@ async def _extract_solver_params(
     """Structured-output extraction of solver parameters; None on failure."""
     try:
         llm = _make_llm(max_tokens=1024)
-        structured = llm.with_structured_output(schema)
+        structured = with_quota_fallback(
+            llm.with_structured_output(schema),
+            max_tokens=1024,
+            structured_schema=schema,
+        )
         result: BaseModel = await structured.ainvoke(  # type: ignore[assignment]
             [
                 SystemMessage(instructions),
@@ -657,7 +670,7 @@ async def synthesize_response(state: AgentState) -> AgentState:
 
     degraded: str | None = None
     try:
-        llm = _make_llm(max_tokens=1024)
+        llm = with_quota_fallback(_make_llm(max_tokens=1024), max_tokens=1024)
         response = await llm.ainvoke(
             [
                 SystemMessage(_SYNTH_SYSTEM),

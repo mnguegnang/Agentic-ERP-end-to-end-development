@@ -16,6 +16,12 @@ llm:
   base_url: "https://models.inference.ai.azure.com"
   temperature: 0.0
   max_tokens: 4096
+  # Fallback LLM (see app/agents/llm_fallback.py) — invoked ONLY when the
+  # primary GitHub Models call raises a 429 (RateLimitError), i.e. the daily
+  # quota or per-minute throttle is exhausted. Requires ANTHROPIC_API_KEY in
+  # .env; if unset, the fallback is a no-op and the original 429 propagates.
+  fallback_provider: "anthropic"
+  fallback_model: "claude-haiku-4-5-20251001"
 
 agent:
   intent_confidence_threshold: 0.7     # below this → ask clarification

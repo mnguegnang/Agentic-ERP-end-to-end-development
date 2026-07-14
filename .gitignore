@@ -16,6 +16,7 @@
 *.nav
 *.snm
 *.vrb
+*.bib
 
 # ──────────────────────────────────────────────
 # Python
@@ -92,3 +93,16 @@ Thumbs.db
 # Writing rules
 Anti-AI-writing-rules.md
 prompt-must-do.md
+
+## ──────────────────────────────────────────────
+# docs Improvememts user guide
+docs
+
+TESTING_GUIDE.md
+CLAUDE.md
+
+
+# ──────────────────────────────────────────────
+# Personal test — not part of the public repo
+# ──────────────────────────────────────────────
+backend/tests/integration/test_intent_eval_live.py

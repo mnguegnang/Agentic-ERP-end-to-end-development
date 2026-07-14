@@ -126,6 +126,16 @@ class Settings(BaseSettings):
     # -- GitHub Models API (primary LLM) ----------------------------------
     github_token: str = Field(..., description="GitHub PAT for GitHub Models API")
 
+    # -- Anthropic (quota-exhaustion fallback LLM only — see llm_fallback.py)
+    anthropic_api_key: str = Field(
+        default="",
+        description=(
+            "Claude API key. Only used as a fallback when GitHub Models "
+            "returns 429 (quota/rate-limit exhausted). Empty = no fallback; "
+            "the original error propagates as before."
+        ),
+    )
+
     # -- PostgreSQL --------------------------------------------------------
     database_url: str = Field(
         default="postgresql+asyncpg://aw_user:changeme@localhost:5432/adventureworks",
@@ -183,6 +193,10 @@ class Settings(BaseSettings):
     @property
     def llm_max_tokens(self) -> int:
         return int(self._yaml["llm"]["max_tokens"])
+
+    @property
+    def fallback_llm_model(self) -> str:
+        return self._yaml["llm"]["fallback_model"]
 
     @property
     def intent_confidence_threshold(self) -> float:

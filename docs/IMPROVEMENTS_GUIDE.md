@@ -288,6 +288,15 @@ The script prints baseline vs. compiled dev-set accuracy and saves the
 artifact. Restart the API; the compiled classifier is picked up on the first
 query. To go back to the zero-shot prompt, delete the artifact JSON.
 
+**Quota fallback (§9) applies here too, but differently.** DSPy wraps litellm,
+a different stack from the request-path LangChain fallback — so the compile
+job can't fall back per-call. Instead it selects the provider up front: a fast
+preflight hits GitHub Models, and on a 429 (quota exhausted) the *entire*
+compile runs on Claude Haiku 4.5 instead (requires `ANTHROPIC_API_KEY`; you'll
+see `GitHub Models is out of quota (429) — compiling with the Anthropic
+fallback model` in the logs). Without an Anthropic key, it exits with a clear
+message telling you to set one or wait for the quota reset.
+
 **Automated tests**
 
 ```bash
@@ -330,6 +339,64 @@ Or inspect interactively: `npx @modelcontextprotocol/inspector python -m app.mcp
 ```bash
 pytest backend/tests/unit/test_mcp_servers.py -v
 ```
+
+---
+
+## 9. Quota-exhaustion LLM fallback — Claude Haiku 4.5
+
+**What changed** — GitHub Models' free tier is small (50 req/day for gpt-4o,
+150/day for gpt-4o-mini) and shared across every LLM call site (intent
+classification, KG entity/relation extraction, CRAG per-document evaluation,
+query rewrite, response synthesis). Once exhausted, every call fails with
+HTTP 429 until the next day. Every call site now wraps its primary runnable
+with `with_quota_fallback()`, which retries — **specifically and only** on
+`openai.RateLimitError` — against Claude Haiku 4.5 via Anthropic. Any other
+exception (validation, timeout, genuine auth failure) is untouched and
+propagates exactly as before this existed.
+
+Files: `backend/app/agents/llm_fallback.py` (the wrapper), applied in
+`orchestrator.py` (4 call sites), `kg_agent.py` (2), `rag/evaluator.py` (3).
+This covers the whole request path. The one code path it does NOT cover is the
+offline DSPy compile script — DSPy wraps litellm, not LangChain — so that has
+its own up-front provider selection (`make_fallback_lm` in `dspy_classifier.py`,
+wired in `compile_intent_classifier.py`); see §7.
+
+**How to use** — set `ANTHROPIC_API_KEY` in `.env` (get one at
+https://console.anthropic.com/settings/keys). Leave it unset and the
+fallback is a total no-op — identical to before this feature existed. The
+fallback model is `claude-haiku-4-5-20251001`, configured in `config.yaml`
+under `llm.fallback_model`.
+
+```bash
+docker compose up -d --build api   # picks up ANTHROPIC_API_KEY from .env
+```
+
+**Automated test**
+
+```bash
+pytest backend/tests/unit/test_llm_fallback.py -v
+```
+
+Covers: no-op without a key, real fallback trigger on `RateLimitError`
+(using the actual `openai.RateLimitError` class, not a string match),
+non-rate-limit errors propagate untouched, fallback never invoked when the
+primary succeeds, and a non-`Runnable` primary (bare mock, as used
+throughout this test suite) is never wrapped.
+
+**Manual test** — hardest part to trigger live is a *real* 429 without
+actually burning your quota. Two options:
+
+1. **Cheapest**: monkeypatch the primary to fail once, live, via a Python
+   REPL — see the reproduction script in `test_llm_fallback.py`
+   (`test_rate_limit_error_triggers_fallback`) for the exact pattern using a
+   real `openai.RateLimitError` and a real `ChatAnthropic` call.
+2. **Most realistic**: exhaust gpt-4o-mini's real daily quota (150 rapid
+   requests), then ask a question in the UI — the answer should still come
+   back correctly (via Haiku) instead of degrading to the keyword/template
+   fallback. Check the API logs for confirmation:
+   ```bash
+   docker logs docker-api-1 --since 5m | grep -i "claude-haiku\|anthropic"
+   ```
 
 ---
 

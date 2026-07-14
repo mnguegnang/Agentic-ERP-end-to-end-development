@@ -179,6 +179,7 @@ async def test_sql_injection_via_nl_query(query: str, label: str) -> None:
             new=AsyncMock(return_value={"kg_subgraph": {"nodes": [], "edges": []}}),
         ),
         patch("app.agents.orchestrator._get_redis", return_value=AsyncMock()),
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         response = await run_orchestrator(query)
 
@@ -281,6 +282,7 @@ async def test_cypher_injection_via_nl_query(query: str, label: str) -> None:
             new=AsyncMock(return_value={"kg_subgraph": {"nodes": [], "edges": []}}),
         ),
         patch("app.agents.orchestrator._get_redis", return_value=AsyncMock()),
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         response = await run_orchestrator(query)
 

@@ -16,6 +16,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from app.agents.graph_state import AgentState
+from app.agents.llm_fallback import with_quota_fallback
 from app.api.schemas import EntityExtractionResult, RelationSelectionResult
 from app.config import get_settings
 from app.kg.client import execute_read
@@ -66,7 +67,11 @@ async def _extract_entities(query: str) -> EntityExtractionResult:
     """Step 1 — extract named entities from the user query."""
     try:
         llm = _make_llm()
-        structured = llm.with_structured_output(EntityExtractionResult)
+        structured = with_quota_fallback(
+            llm.with_structured_output(EntityExtractionResult),
+            max_tokens=512,
+            structured_schema=EntityExtractionResult,
+        )
         result: EntityExtractionResult = await structured.ainvoke(  # type: ignore[assignment]
             [
                 SystemMessage(_ENTITY_SYSTEM),
@@ -138,7 +143,11 @@ async def _select_relations(query: str, entities: list[str]) -> RelationSelectio
     """Step 2 — choose relation path for KG traversal."""
     try:
         llm = _make_llm()
-        structured = llm.with_structured_output(RelationSelectionResult)
+        structured = with_quota_fallback(
+            llm.with_structured_output(RelationSelectionResult),
+            max_tokens=512,
+            structured_schema=RelationSelectionResult,
+        )
         result: RelationSelectionResult = await structured.ainvoke(  # type: ignore[assignment]
             [
                 SystemMessage(_RELATION_SYSTEM),

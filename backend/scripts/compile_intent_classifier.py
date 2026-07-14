@@ -147,30 +147,54 @@ def main() -> int:
         print("dspy is not installed. Run:  pip install -e '.[dspy]'", file=sys.stderr)
         return 1
 
-    from app.agents.dspy_classifier import ARTIFACT_PATH, build_program, make_lm
+    from app.agents.dspy_classifier import (
+        ARTIFACT_PATH,
+        build_program,
+        make_fallback_lm,
+        make_lm,
+    )
 
+    # Provider selection for the whole compile job. DSPy/litellm has no
+    # per-call LangChain-style fallback, so we pick the provider up front:
+    # GitHub Models normally, but Claude Haiku 4.5 when GitHub Models is out
+    # of quota (429) and an ANTHROPIC_API_KEY is configured — mirroring the
+    # request-path fallback in app/agents/llm_fallback.py.
+    lm = None
     if not args.skip_auth_check:
         try:
             _preflight_llm_auth()
         except Exception as exc:
             if _is_rate_limit_error(exc):
-                print(
-                    "Rate limit/quota reached during preflight check. "
-                    "Retry after quota reset, or use a higher-quota token.",
-                    file=sys.stderr,
+                lm = make_fallback_lm()
+                if lm is None:
+                    print(
+                        "Rate limit/quota reached during preflight check, and no "
+                        "ANTHROPIC_API_KEY is set to fall back to. Retry after "
+                        "quota reset, set ANTHROPIC_API_KEY in .env to compile "
+                        "with Claude Haiku 4.5, or use a higher-quota token.",
+                        file=sys.stderr,
+                    )
+                    return 3
+                from app.config import get_settings
+
+                logger.warning(
+                    "GitHub Models is out of quota (429) — compiling with the "
+                    "Anthropic fallback model (%s) instead. This uses Anthropic "
+                    "credits.",
+                    get_settings().fallback_llm_model,
                 )
-                return 3
-            if _is_auth_error(exc):
+            elif _is_auth_error(exc):
                 print(
                     "Authentication to GitHub Models failed (401/Bad credentials). "
                     "Check GITHUB_TOKEN in .env, then retry.",
                     file=sys.stderr,
                 )
                 return 2
-            print(f"LLM preflight check failed: {exc}", file=sys.stderr)
-            return 1
+            else:
+                print(f"LLM preflight check failed: {exc}", file=sys.stderr)
+                return 1
 
-    dspy.configure(lm=make_lm())
+    dspy.configure(lm=lm if lm is not None else make_lm())
 
     trainset, devset = _load_examples()
     logger.info("Dataset: %d train / %d dev", len(trainset), len(devset))

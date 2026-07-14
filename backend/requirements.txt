@@ -17,6 +17,7 @@ langgraph==0.2.60
 langchain-core==0.3.28
 langchain-openai==0.2.14
 langchain-community==0.3.13
+langchain-anthropic==0.3.0
 langsmith==0.2.10
 mcp==1.5.0
 ortools==9.12.4544

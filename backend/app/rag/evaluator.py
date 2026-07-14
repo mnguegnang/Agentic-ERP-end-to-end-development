@@ -12,6 +12,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
+from app.agents.llm_fallback import with_quota_fallback
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -73,11 +74,15 @@ async def evaluate_relevance(query: str, top_doc: dict | None) -> str:
             temperature=0.0,
             max_tokens=256,  # type: ignore[call-arg]
         )
-        structured = llm.with_structured_output(_RelevanceLabel)
+        structured = with_quota_fallback(
+            llm.with_structured_output(_RelevanceLabel),
+            max_tokens=256,
+            structured_schema=_RelevanceLabel,
+        )
         result: _RelevanceLabel = await structured.ainvoke(  # type: ignore[assignment]
             [
                 SystemMessage(_EVAL_SYSTEM_PROMPT),
-                HumanMessage(f"Query: {query}\n\nDocument chunk:\n{chunk_text[:800]}"),
+                HumanMessage(f"Query: {query}\n\nDocument chunk:\n{chunk_text}"),
             ]
         )
         label = result.label.strip().lower()
@@ -118,7 +123,7 @@ async def evaluate_relevance_batch(query: str, docs: list[dict]) -> list[str]:
         return labels
 
     numbered = "\n\n".join(
-        f"[{n + 1}] {(doc.get('chunk_text') or '')[:800]}" for n, (_, doc) in enumerate(to_eval)
+        f"[{n + 1}] {doc.get('chunk_text') or ''}" for n, (_, doc) in enumerate(to_eval)
     )
     try:
         s = get_settings()
@@ -129,7 +134,11 @@ async def evaluate_relevance_batch(query: str, docs: list[dict]) -> list[str]:
             temperature=0.0,
             max_tokens=512,  # type: ignore[call-arg]
         )
-        structured = llm.with_structured_output(_RelevanceLabels)
+        structured = with_quota_fallback(
+            llm.with_structured_output(_RelevanceLabels),
+            max_tokens=512,
+            structured_schema=_RelevanceLabels,
+        )
         result: _RelevanceLabels = await structured.ainvoke(  # type: ignore[assignment]
             [
                 SystemMessage(_BATCH_EVAL_SYSTEM_PROMPT),
@@ -170,7 +179,8 @@ async def rewrite_query(query: str) -> str | None:
             temperature=0.0,
             max_tokens=128,  # type: ignore[call-arg]
         )
-        response = await llm.ainvoke(
+        llm_with_fallback = with_quota_fallback(llm, max_tokens=128)
+        response = await llm_with_fallback.ainvoke(
             [
                 SystemMessage(_REWRITE_SYSTEM_PROMPT),
                 HumanMessage(query),

@@ -32,6 +32,10 @@ dependencies = [
     "langchain-core==0.3.28",
     "langchain-openai==0.2.14",
     "langchain-community==0.3.13",
+    # Quota-exhaustion fallback LLM (Claude Haiku) — 0.3.0 pinned because it's
+    # the newest release still compatible with langchain-core==0.3.28 without
+    # forcing a langsmith bump (later releases need langchain-core>=0.3.30+).
+    "langchain-anthropic==0.3.0",
     "langsmith==0.2.10",
     # MCP
     "mcp==1.5.0",

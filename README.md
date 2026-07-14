@@ -12,11 +12,12 @@ Agentic ERP Supply Chain Copilot is a production-grade multi-agent system that a
 
 | Layer | Technology |
 |-------|-----------|
-| Agent orchestration | LangGraph 0.2, LangChain-OpenAI |
-| LLM | GitHub Models API — GPT-4o (`models.inference.ai.azure.com`) |
+| Agent orchestration | LangGraph 0.2, LangChain-OpenAI, LangChain-Anthropic |
+| LLM | GitHub Models API — GPT-4o-mini by default, GPT-4o optional (`models.inference.ai.azure.com`); quota-exhaustion fallback to Claude Haiku 4.5 (Anthropic) |
+| Intent classification | Zero-shot structured-output prompt, or a DSPy-compiled program (opt-in via `pip install -e ".[dspy]"`) |
 | OR solvers | OR-Tools (MCNF, JSP, VRP, Disruption), CVXPY (Robust, MEIO), SciPy (Bullwhip) |
 | RAG pipeline | BGE-large-en-v1.5 + BM25 + RRF + CrossEncoder rerank |
-| Knowledge graph | Neo4j 5.27 (local) / 5.26 (AKS in-cluster) |
+| Knowledge graph | Neo4j 5.26 |
 | Databases | PostgreSQL 16 + pgvector, Redis 7.4 |
 | Backend | FastAPI 0.115, Uvicorn, SQLAlchemy async |
 | Frontend | React 18, TypeScript, Vite, vis-network |
@@ -43,9 +44,11 @@ Agentic ERP Supply Chain Copilot is a production-grade multi-agent system that a
 
 ### Subsystems
 
-**Intent Classification** — 10 intents: `mcnf_solve`, `jsp_schedule`, `vrp_route`, `robust_allocate`, `meio_optimize`, `bullwhip_analyze`, `disruption_resource`, `kg_query`, `contract_query`, `multi_step`. Confidence threshold: 0.7. Deterministic keyword fallback fires on HTTP 429 (LLM rate limit).
+**Intent Classification** — 10 intents: `mcnf_solve`, `jsp_schedule`, `vrp_route`, `robust_allocate`, `meio_optimize`, `bullwhip_analyze`, `disruption_resource`, `kg_query`, `contract_query`, `multi_step`. Confidence threshold: 0.7. Two classifier paths: a DSPy-compiled program if `agents/compiled_intent_classifier.json` exists (opt-in, see `backend/scripts/compile_intent_classifier.py`), otherwise a zero-shot structured-output prompt. On an HTTP 429 (GitHub Models quota exhausted), the call first retries once on Claude Haiku 4.5 (if `ANTHROPIC_API_KEY` is set), then falls back to deterministic keyword rules.
 
-**CRAG Pipeline** — BGE-large-en-v1.5 embeddings → pgvector cosine + BM25 → RRF@60 fusion → CrossEncoder rerank (ms-marco-MiniLM-L-12-v2) → LLM relevance filter. Drops irrelevant chunks before synthesis.
+**CRAG Pipeline** — BGE-large-en-v1.5 embeddings → pgvector cosine + BM25 → RRF@60 fusion → CrossEncoder rerank (ms-marco-MiniLM-L-12-v2) → per-document LLM relevance labeling in one batched call. Irrelevant chunks are dropped individually rather than gating on the top-1 result; if every chunk is irrelevant, the query is rewritten once and retrieval is retried before returning `no_answer`.
+
+**Quota-Exhaustion LLM Fallback** — every LLM call site wraps its GitHub Models runnable so that, specifically and only on an `openai.RateLimitError` (HTTP 429), it retries once on Claude Haiku 4.5 via Anthropic. Any other exception propagates unchanged. Requires `ANTHROPIC_API_KEY`; unset, it's a total no-op.
 
 **OR Solvers** — seven deterministic solvers, dispatched by intent:
 
@@ -59,11 +62,11 @@ Agentic ERP Supply Chain Copilot is a production-grade multi-agent system that a
 | MEIO/GSM | CVXPY | `meio_optimize` |
 | Bullwhip Amplification | SciPy | `bullwhip_analyze` |
 
-**Human-in-the-Loop (HiTL)** — when `total_cost > $10,000`, a UUID decision record is stored in Redis (24 h TTL). The manager approves or rejects via `POST /api/approve/{id}`. The frontend renders an Approve/Reject banner live over the WebSocket.
+**Human-in-the-Loop (HiTL)** — when `total_cost > $10,000`, the graph (compiled with a `MemorySaver` checkpointer) calls `interrupt()`, genuinely pausing the run. The `decision_id` (= LangGraph `thread_id`) is stored in Redis (24 h TTL) for audit. `POST /api/approve/{id}` requires the `MANAGER_APPROVAL_PASSWORD` (wrong password → 403; unset → 503 locked) and resumes the paused run. The frontend renders an Approve/Reject banner live over the WebSocket. Caveat: the checkpointer is in-process, so an API restart drops paused runs (the Redis audit record survives, but the run itself cannot be resumed).
 
-**MCP Tool Servers** — six FastMCP servers expose typed tools to the agent: `server_erp.py`, `server_kg.py`, `server_crag.py`, `server_ortools.py`, `server_cvxpy.py`, `server_scipy.py`.
+**MCP Tool Servers** — six FastMCP servers expose typed tools to the agent: `server_erp.py`, `server_kg.py`, `server_crag.py`, `server_ortools.py`, `server_cvxpy.py`, `server_scipy.py`. They delegate to the same solver/agent functions the in-process orchestrator calls directly (verified by `tests/unit/test_mcp_servers.py`), not a separate reimplementation.
 
-**Semantic Cache** — Redis-backed, TTL 3600 s, short-circuits full graph traversal on near-duplicate queries.
+**Semantic Cache** — Redis-backed, TTL 3600 s. Two levels: exact SHA-256 match on the normalized query, then cosine ≥ 0.95 between BGE query embeddings. A semantic hit additionally requires a lexical guard — the two queries must share the same numbers and entity codes — so parametric queries ("Allocate 400 units" vs "1000 units") are never answered from each other's cached result. Only low-stakes responses are cached (never approval-gated, error/degraded, or `unclear`-intent responses).
 
 ---
 
@@ -90,8 +93,8 @@ Agentic ERP Supply Chain Copilot is a production-grade multi-agent system that a
 git clone https://github.com/Gabin-Maxime/Agentic-ERP-SupplyChain-Copilot.git
 cd Agentic-ERP-SupplyChain-Copilot
 cp .env.example .env
-# Fill in: GITHUB_TOKEN, PG_PASSWORD, NEO4J_PASSWORD, JWT_SECRET_KEY
-# Optional: LANGSMITH_API_KEY
+# Fill in: GITHUB_TOKEN, PG_PASSWORD, NEO4J_PASSWORD, JWT_SECRET_KEY, MANAGER_APPROVAL_PASSWORD
+# Optional: LANGSMITH_API_KEY, ANTHROPIC_API_KEY (quota-exhaustion fallback LLM)
 ```
 
 ### 2. Set up Python environment
@@ -117,9 +120,11 @@ Wait for all services to be healthy, then:
 
 ```bash
 python backend/scripts/seed_adventureworks.py   # AdventureWorks ERP data + pgvector embeddings
-python backend/scripts/seed_neo4j.py            # 14 suppliers, 9 components, 4 products, supply-chain graph
+python -m backend.scripts.seed_neo4j            # 14 suppliers, 9 components, 4 products, supply-chain graph
 python backend/scripts/seed_contracts.py        # 20 synthetic supplier contracts → CRAG embeddings
 ```
+
+> `seed_neo4j.py` must run as a module (`python -m backend.scripts.seed_neo4j`), not as a direct file path — it imports `backend.scripts.seed_adventureworks`, which only resolves when the repo root is on `sys.path`.
 
 Open `http://localhost:3000`.
 

@@ -111,6 +111,10 @@ async def test_classify_intent_high_confidence() -> None:
     with (
         patch("app.agents.orchestrator.get_settings") as mock_settings,
         patch("app.agents.orchestrator.ChatOpenAI") as mock_llm_cls,
+        # llm_classify_intent tries the DSPy-compiled classifier first; force
+        # it to opt out so this stays deterministic regardless of whether a
+        # compiled_intent_classifier.json happens to exist on disk.
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         _patch_settings(mock_settings)
         mock_llm = MagicMock()
@@ -139,6 +143,10 @@ async def test_classify_intent_low_confidence_sets_unclear() -> None:
     with (
         patch("app.agents.orchestrator.get_settings") as mock_settings,
         patch("app.agents.orchestrator.ChatOpenAI") as mock_llm_cls,
+        # llm_classify_intent tries the DSPy-compiled classifier first; force
+        # it to opt out so this stays deterministic regardless of whether a
+        # compiled_intent_classifier.json happens to exist on disk.
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         _patch_settings(mock_settings)
         mock_llm = MagicMock()
@@ -159,6 +167,10 @@ async def test_classify_intent_llm_failure_returns_unclear() -> None:
     with (
         patch("app.agents.orchestrator.get_settings") as mock_settings,
         patch("app.agents.orchestrator.ChatOpenAI") as mock_llm_cls,
+        # llm_classify_intent tries the DSPy-compiled classifier first; force
+        # it to opt out so this stays deterministic regardless of whether a
+        # compiled_intent_classifier.json happens to exist on disk.
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         _patch_settings(mock_settings)
         mock_llm = MagicMock()

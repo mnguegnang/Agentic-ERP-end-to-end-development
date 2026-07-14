@@ -181,6 +181,9 @@ async def test_run_orchestrator_mcnf_path_returns_ws_response() -> None:
             "app.agents.orchestrator.kg_agent_node",
             AsyncMock(side_effect=lambda s: {**s, "kg_subgraph": {}}),
         ),
+        # Force the DSPy path to opt out so this stays deterministic regardless
+        # of whether compiled_intent_classifier.json exists on disk locally.
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         _patch_settings(mock_s)
 
@@ -227,6 +230,7 @@ async def test_run_orchestrator_contract_query_path() -> None:
             "app.agents.contract_agent.retrieve_and_evaluate",
             AsyncMock(return_value=mock_crag),
         ),
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         _patch_settings(mock_s)
 
@@ -300,6 +304,7 @@ async def test_run_orchestrator_pauses_on_high_cost_and_resumes_on_approval() ->
             MagicMock(return_value=high_cost_result),
         ),
         patch("app.agents.orchestrator._get_redis", return_value=mock_redis),
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         _patch_settings(mock_s)
 

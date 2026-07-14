@@ -65,7 +65,7 @@ def build_program():  # -> dspy.Module
 
 
 def make_lm():  # -> dspy.LM
-    """DSPy language model bound to the configured provider (GitHub Models)."""
+    """DSPy language model bound to the primary provider (GitHub Models)."""
     import dspy
 
     s = get_settings()
@@ -73,6 +73,27 @@ def make_lm():  # -> dspy.LM
         f"openai/{s.llm_model}",
         api_base=s.llm_base_url,
         api_key=s.github_token,
+        temperature=0.0,
+        max_tokens=1024,
+    )
+
+
+def make_fallback_lm():  # -> dspy.LM | None
+    """DSPy LM bound to the Anthropic quota-fallback model (Claude Haiku 4.5).
+
+    Returns None when no ``ANTHROPIC_API_KEY`` is configured. DSPy wraps
+    litellm, which is a different stack from the LangChain ``with_quota_fallback``
+    used on the request path — so the DSPy compile job selects its provider up
+    front (see ``scripts/compile_intent_classifier.py``) rather than per-call.
+    """
+    import dspy
+
+    s = get_settings()
+    if not s.anthropic_api_key:
+        return None
+    return dspy.LM(
+        f"anthropic/{s.fallback_llm_model}",
+        api_key=s.anthropic_api_key,
         temperature=0.0,
         max_tokens=1024,
     )

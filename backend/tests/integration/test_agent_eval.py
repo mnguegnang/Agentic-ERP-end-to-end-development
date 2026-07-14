@@ -762,6 +762,13 @@ async def test_classify_intent_propagates_to_state(sample: LabelledQuery) -> Non
     with (
         patch("app.agents.orchestrator.get_settings", return_value=_make_settings()),
         patch("app.agents.orchestrator.ChatOpenAI", return_value=mock_llm),
+        # llm_classify_intent tries the DSPy-compiled classifier BEFORE the
+        # zero-shot ChatOpenAI path above. Force it to opt out so this test
+        # stays fully mocked/deterministic regardless of whether a developer
+        # happens to have compiled_intent_classifier.json on disk locally —
+        # otherwise this "no LLM cost" gate silently starts making real,
+        # non-deterministic API calls the moment that artifact exists.
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         result_state = await classify_intent(state)
 
@@ -848,6 +855,7 @@ async def test_low_confidence_intent_asks_clarification() -> None:
     with (
         patch("app.agents.orchestrator.get_settings", return_value=_make_settings()),
         patch("app.agents.orchestrator.ChatOpenAI", return_value=mock_llm),
+        patch("app.agents.dspy_classifier.classify", AsyncMock(return_value=None)),
     ):
         result_state = await classify_intent(state)
 
