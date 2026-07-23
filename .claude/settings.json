@@ -36,7 +36,9 @@
       "WebFetch(domain:codingbrewery.com)",
       "WebFetch(domain:bagerbach.com)",
       "Bash(grep -n \"^  [a-z-]*:$\\\\|name:\" .github/workflows/ci.yml)",
-      "Bash(awk '/^CONTRACT_DEFS/,/^\\\\]/' backend/scripts/seed_adventureworks.py)"
+      "Bash(awk '/^CONTRACT_DEFS/,/^\\\\]/' backend/scripts/seed_adventureworks.py)",
+      "WebFetch(domain:dspy.ai)",
+      "Bash(python -c ' *)"
     ]
   }
 }

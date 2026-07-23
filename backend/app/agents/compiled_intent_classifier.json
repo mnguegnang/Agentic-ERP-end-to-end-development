@@ -1,0 +1,71 @@
+{
+  "predict": {
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "augmented": true,
+        "query": "Route 500 units from warehouse A to DC Berlin with min cost",
+        "reasoning": "The query asks for routing a specific quantity (500 units) from a source (warehouse A) to a destination (DC Berlin) while optimizing for minimum cost. This is a classic vehicle routing or network flow problem with cost minimization as the objective. It involves finding an optimal path/route with capacity and cost constraints, which aligns with either VRP (vehicle routing problem) or MCNF (minimum cost network flow). Given the emphasis on routing from point A to point B with cost optimization and a specific quantity, this is best classified as a minimum cost network flow problem.",
+        "intent": "mcnf_solve",
+        "ddd_context": "logistics",
+        "confidence": 0.85
+      },
+      {
+        "augmented": true,
+        "query": "What is the minimum makespan for our assembly line schedule?",
+        "reasoning": "The query asks about minimizing makespan for an assembly line schedule. This is a classic job shop scheduling problem where the objective is to minimize the total completion time of all jobs. The focus is on scheduling optimization within production operations.",
+        "intent": "jsp_schedule",
+        "ddd_context": "logistics",
+        "confidence": 0.92
+      },
+      {
+        "augmented": true,
+        "query": "SOCP robust optimization: diversify supply sources to hedge cost risk",
+        "reasoning": "The query explicitly mentions \"SOCP robust optimization\" and \"diversify supply sources to hedge cost risk\". This is a strategic sourcing problem focused on mitigating supply cost volatility through source diversification. SOCP (Second-Order Cone Programming) is a mathematical optimization technique used for robust allocation problems under uncertainty. The intent is to optimize supplier allocation decisions while managing cost risk.",
+        "intent": "robust_allocate",
+        "ddd_context": "sourcing",
+        "confidence": 0.92
+      },
+      {
+        "query": "What is the optimal shipping path from node A to node D with capacity 5000?",
+        "intent": "mcnf_solve",
+        "ddd_context": "visibility",
+        "confidence": 0.9
+      }
+    ],
+    "signature": {
+      "instructions": "You are an intelligent supply chain query classifier for an ERP copilot system. Your task is to analyze natural-language supply chain queries and classify them into structured categories that route them to specialized optimization solvers and domain systems.\n\n**Your Classification Must Produce Exactly Four Outputs:**\n\n1. **Reasoning**: Provide a clear explanation of why the query belongs to its classified intent. Identify specific keywords, explicit problem references, operational parameters, and supply chain concepts mentioned in the query. Explain how these elements map to the chosen intent category.\n\n2. **Intent**: Classify the query into exactly ONE of these 10 supply chain problem types:\n   - `bullwhip_analyze`: Demand amplification and variance propagation analysis\n   - `contract_query`: Supplier agreements, SLA terms, and contract management\n   - `disruption_resource`: Supply chain resilience and resource allocation during disruptions\n   - `jsp_schedule`: Job shop scheduling and production sequencing\n   - `kg_query`: Knowledge graph traversals for data discovery and relationship mapping\n   - `mcnf_solve`: Minimum-cost network flow optimization across supply network\n   - `meio_optimize`: Mixed-integer optimization for tactical decisions\n   - `multi_step`: Queries requiring multiple solvers or sequential reasoning steps\n   - `robust_allocate`: Robust optimization under uncertainty for resource allocation\n   - `vrp_route`: Vehicle routing and logistics network optimization\n\n3. **Ddd Context**: Classify the query into exactly ONE of these 5 Domain-Driven Design bounded contexts:\n   - `visibility`: Real-time tracking, demand signals, supply transparency\n   - `inventory`: Stock levels, safety stock, demand amplification, bullwhip effects\n   - `compliance`: Regulatory requirements, sustainability, audit trails\n   - `sourcing`: Supplier selection, procurement, multi-source decisions\n   - `logistics`: Transportation, routing, distribution network design\n\n4. **Confidence**: Provide a numerical confidence score between 0.0 and 1.0 reflecting the certainty of your classification. High confidence (0.90+) indicates the query clearly maps to the intent and context. Lower confidence (0.70-0.85) indicates the query is ambiguous or could map to multiple intents.\n\n**Classification Strategy:**\n\n- Look for explicit problem names and algorithmic references (e.g., \"bullwhip effect\" → bullwhip_analyze)\n- Identify operational parameters and constraints that signal specific problem types\n- Recognize multi-part queries that combine multiple solvers (classify as `multi_step`)\n- Map business concerns to their underlying technical optimization problems\n- When queries are ambiguous between two intents, choose the primary/dominant intent and note uncertainty in confidence score",
+      "fields": [
+        {
+          "prefix": "Query:",
+          "description": "Natural-language supply-chain query"
+        },
+        {
+          "prefix": "Reasoning:",
+          "description": "${reasoning}"
+        },
+        {
+          "prefix": "Intent:",
+          "description": "Exactly one of: bullwhip_analyze, contract_query, disruption_resource, jsp_schedule, kg_query, mcnf_solve, meio_optimize, multi_step, robust_allocate, vrp_route"
+        },
+        {
+          "prefix": "Ddd Context:",
+          "description": "Exactly one of: visibility, inventory, compliance, sourcing, logistics"
+        },
+        {
+          "prefix": "Confidence:",
+          "description": "Classification confidence between 0.0 and 1.0"
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.11",
+      "dspy": "3.2.1",
+      "cloudpickle": "3.1"
+    }
+  }
+}
